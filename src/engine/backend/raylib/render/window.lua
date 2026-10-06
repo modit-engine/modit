@@ -50,10 +50,13 @@ local m = {}
 --- @param enable_audio boolean|nil Whether to initialize audio subsystem
 --- @param target_fps number|nil Target frame rate limit
 function m.init(title, width, height, flags, icon_path, enable_audio, target_fps)
+    local want_maximized = flags and flags.maximized
+
     local flag_mask = 0
     for flag_name, is_enabled in pairs(flags or {}) do
-        local flag_bit = WINDOW_FLAGS[flag_name:lower()]
-        if flag_bit and is_enabled then
+        local name = flag_name:lower()
+        local flag_bit = WINDOW_FLAGS[name]
+        if flag_bit and is_enabled and name ~= "maximized" then
             flag_mask = _bit.bor(flag_mask, flag_bit)
         end
     end
@@ -61,8 +64,8 @@ function m.init(title, width, height, flags, icon_path, enable_audio, target_fps
     _lib.SetConfigFlags(flag_mask)
     _lib.InitWindow(width, height, title)
 
-    if flags and flags.maximized then
-        _lib.SetWindowState(WINDOW_FLAGS.maximized)
+    if want_maximized then
+        _lib.MaximizeWindow()
     end
 
     if icon_path then
@@ -115,7 +118,7 @@ end
 --- Checks if user or system requested window closure
 --- @return boolean should_close True if window should close
 function m.should_close()
-    return _lib.WindowShouldClose() ~= 0
+    return _lib.WindowShouldClose()
 end
 
 --- @section Window State Flags & Properties

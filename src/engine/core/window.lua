@@ -9,7 +9,7 @@ local _backend = require("src.engine.backend").window
 --- @section Initialisation
 
 local m = {
-    title = "Lua Engine",
+    title = "Modit",
     size = { width = 1280, height = 720 },
     fps = { draw = false, target = false },
     audio = false,

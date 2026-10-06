@@ -1,3 +1,21 @@
+# v0.3.0
+
+Raylib 6.0 and generated bindings.
+
+Changes:
+
+* Updated the bundled raylib DLL to 6.0
+* `engine/backend/raylib/ffi.lua` is now generated from the raylib API definition (`tools/raylib_api/gen_api.lua`) instead of being hand-written
+* The generated file covers the full API (structs, aliases, enums, callbacks and functions) with raylib's descriptions as comments, and includes the library loading
+* Added the raylib version to the FFI module's exports (`ffi.version`)
+* Fixed the window launching maximized but keeping a stale 1600x900 render size on raylib 6.0. Maximize is now applied after the window is created with `MaximizeWindow()`, rather than as a creation flag
+* Fixed `window.should_close()` for the `bool` return type, since `WindowShouldClose` returns a `bool` in the real raylib signature
+
+Notes:
+
+* Struct layouts and signatures now come straight from the raylib API file, so upgrading raylib means re-running the generator against the matching API file
+* `ffi.lua` is generated and shouldn't be edited by hand. Changes to the library loading go in the generator's template
+
 # v0.2.0
 
 Engine UI split out of the editor.
