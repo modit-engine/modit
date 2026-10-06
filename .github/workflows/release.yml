@@ -1,0 +1,26 @@
+name: Package Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release Zip
+        run: |
+          NAME="${{ github.event.repository.name }}"
+          git archive --format=zip --prefix="${NAME}/" -o "${NAME}.zip" HEAD
+          echo "ZIP_FILE=${NAME}.zip" >> $GITHUB_ENV
+
+      - name: Upload Zip to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_FILE }}
