@@ -1,3 +1,8 @@
+> **Vendor files**
+>
+> Modit currently ships with some vendored `.dll` and `.ttf` files. If you don't trust the bundled binaries, feel free to replace them with your own copies.
+
+
 <div align="center">
 
 # Modit Engine
