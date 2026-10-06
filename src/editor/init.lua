@@ -9,6 +9,12 @@ local _ui = require("src.editor.ui")
 local _session = require("src.editor.core.session")
 local _settings = require("src.editor.core.settings")
 
+--- @section Engine UI
+
+local _components = _engine.ui.components
+local _input = _engine.ui.input
+local _theme = _engine.ui.theme
+
 --- @section Constants
 
 local SPLIT_HANDLE_SIZE = 6
@@ -23,7 +29,7 @@ local m = {}
 --- @param rect table Bounding rectangle { x, y, w, h }
 --- @param title string Panel title string
 local function draw_dock_panel(rect, title)
-    _ui.components.panel(rect.x, rect.y, rect.w, rect.h, title)
+    _components.panel(rect.x, rect.y, rect.w, rect.h, title)
 end
 
 --- @section Functions
@@ -31,6 +37,7 @@ end
 --- Initializes editor settings, panel sizes, and file explorer callbacks
 function m.init()
     _settings.load()
+     _theme.set(_settings.theme)
 
     for _, panel_key in ipairs({ "left", "right", "bottom" }) do
         local saved_size = _settings.sizes[panel_key]
@@ -67,6 +74,7 @@ end
 function m.close()
     _session.stop()
     _ui.panels.code.save_all()
+    _settings.set_theme(_theme.name())
     for panel_key, size_value in pairs(_ui.style.layout.sizes) do
         _settings.sizes[panel_key] = size_value
     end
@@ -75,13 +83,13 @@ end
 
 --- Renders complete editor UI layout, dock panels, central viewport, splitters, toolbar, and modal dialogs
 function m.draw()
-    local active_theme = _ui.style.theme.get()
+    local active_theme = _theme.get()
     local window_w, window_h = _engine.window.get_size()
     local show_flags = _ui.panels.toolbar.show
     local regions = _ui.style.layout.shell(window_w, window_h, show_flags.left, show_flags.right, show_flags.bottom)
     local panel_sizes = _ui.style.layout.sizes
 
-    _ui.input.set_blocked(_ui.components.modal.is_open())
+    _input.set_blocked(_components.modal.is_open())
 
     _engine.draw.set_colour(active_theme.bg_main)
     _engine.draw.rect(0, 0, window_w, window_h)
@@ -98,25 +106,25 @@ function m.draw()
 
     if regions.right.w > 0 then
         local text_x, text_y = regions.right.x + 12, regions.right.y + 42
-        _ui.components.label("FPS: " .. _engine.window.get_fps(), text_x, text_y, 16)
-        _ui.components.label(("Window: %d x %d"):format(window_w, window_h), text_x, text_y + 24, 16)
+        _components.label("FPS: " .. _engine.window.get_fps(), text_x, text_y, 16)
+        _components.label(("Window: %d x %d"):format(window_w, window_h), text_x, text_y + 24, 16)
     end
 
     -- Resize splitters
     if regions.left.w > 0 then
-        panel_sizes.left = _ui.components.splitter(regions.left.x + regions.left.w - SPLIT_HANDLE_SIZE / 2, regions.left.y, SPLIT_HANDLE_SIZE, regions.left.h, "x", panel_sizes.left, 1)
+        panel_sizes.left = _components.splitter(regions.left.x + regions.left.w - SPLIT_HANDLE_SIZE / 2, regions.left.y, SPLIT_HANDLE_SIZE, regions.left.h, "x", panel_sizes.left, 1)
     end
     if regions.right.w > 0 then
-        panel_sizes.right = _ui.components.splitter(regions.right.x - SPLIT_HANDLE_SIZE / 2, regions.right.y, SPLIT_HANDLE_SIZE, regions.right.h, "x", panel_sizes.right, -1)
+        panel_sizes.right = _components.splitter(regions.right.x - SPLIT_HANDLE_SIZE / 2, regions.right.y, SPLIT_HANDLE_SIZE, regions.right.h, "x", panel_sizes.right, -1)
     end
     if regions.bottom.h > 0 then
-        panel_sizes.bottom = _ui.components.splitter(regions.bottom.x, regions.bottom.y - SPLIT_HANDLE_SIZE / 2, regions.bottom.w, SPLIT_HANDLE_SIZE, "y", panel_sizes.bottom, -1)
+        panel_sizes.bottom = _components.splitter(regions.bottom.x, regions.bottom.y - SPLIT_HANDLE_SIZE / 2, regions.bottom.w, SPLIT_HANDLE_SIZE, "y", panel_sizes.bottom, -1)
     end
 
     _ui.panels.toolbar.draw(regions.toolbar, active_theme)
 
-    _ui.input.set_blocked(false)
-    _ui.components.modal.draw(window_w, window_h)
+    _input.set_blocked(false)
+    _components.modal.draw(window_w, window_h)
 end
 
 return m

@@ -7,7 +7,7 @@
 local _draw = require("src.engine.modules.draw")
 local _mouse = require("src.engine.modules.mouse")
 local _keyboard = require("src.engine.modules.keyboard")
-local _theme = require("src.editor.ui.style.theme")
+local _theme = require("src.engine.ui.style.theme")
 local _font = require("src.engine.modules.font")
 
 --- @section Constants & State
@@ -30,7 +30,7 @@ local scroll_stack, scroll_depth = {}, 0
 --- @section Module Initialization
 
 local m = {
-    _theme = _theme,
+    theme = _theme,
 }
 
 --- @section Helper Functions
@@ -440,5 +440,23 @@ function m.scroll_end()
 
     _draw.pop_clip()
 end
+
+--- @section Lazy Submodules
+
+local LAZY = {
+    components = "src.engine.ui.components",
+    input = "src.engine.ui.input",
+}
+
+setmetatable(m, {
+    __index = function(t, key)
+        local path = LAZY[key]
+        if path then
+            local value = require(path)
+            rawset(t, key, value)
+            return value
+        end
+    end,
+})
 
 return m

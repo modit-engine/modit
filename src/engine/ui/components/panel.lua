@@ -8,8 +8,8 @@
 local _draw = require("src.engine.modules.draw")
 
 --- Editor
-local _theme = require("src.editor.ui.style.theme")
-local _label = require("src.editor.ui.components.label")
+local _theme = require("src.engine.ui.style.theme")
+local _label = require("src.engine.ui.components.label")
 
 --- @section Constants
 

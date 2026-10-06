@@ -8,7 +8,7 @@
 local _keyboard = require("src.engine.modules.keyboard")
 
 --- Editor
-local _input = require("src.editor.ui.input")
+local _input = require("src.engine.ui.input")
 local _state = require("src.editor.ui.panels.code.modules.state")
 local _buffer = require("src.editor.ui.panels.code.modules.buffer")
 local _history = require("src.editor.ui.panels.code.modules.history")

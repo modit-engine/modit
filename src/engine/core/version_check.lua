@@ -14,7 +14,7 @@ local m = {}
 
 --- @section Configuration
 
-local RELEASES_URL = "https://api.github.com/repos/rig-fivem/rig/releases/latest"
+local RELEASES_URL = "https://api.github.com/repos/CaseIRL/modit/releases/latest"
 
 --- @section Functions
 

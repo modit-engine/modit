@@ -9,9 +9,9 @@ local _draw = require("src.engine.modules.draw")
 local _font = require("src.engine.modules.font")
 
 --- Engine
-local _theme = require("src.editor.ui.style.theme")
-local _input = require("src.editor.ui.input")
-local _components = require("src.editor.ui.components")
+local _theme = require("src.engine.ui.style.theme")
+local _input = require("src.engine.ui.input")
+local _components = require("src.engine.ui.components")
 local _code = require("src.editor.ui.panels.code")
 local _session = require("src.editor.core.session")
 local _settings = require("src.editor.core.settings")

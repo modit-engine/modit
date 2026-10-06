@@ -10,8 +10,8 @@ local _font = require("src.engine.modules.font")
 local _window = require("src.engine.core.window")
 
 --- Editor
-local _theme = require("src.editor.ui.style.theme")
-local _components = require("src.editor.ui.components")
+local _theme = require("src.engine.ui.style.theme")
+local _components = require("src.engine.ui.components")
 local _session = require("src.editor.core.session")
 
 --- @section Constants

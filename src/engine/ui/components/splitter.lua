@@ -8,8 +8,8 @@
 local _draw = require("src.engine.modules.draw")
 
 --- Editor
-local _input = require("src.editor.ui.input")
-local _theme = require("src.editor.ui.style.theme")
+local _input = require("src.engine.ui.input")
+local _theme = require("src.engine.ui.style.theme")
 
 --- @section Variables
 

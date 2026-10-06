@@ -10,9 +10,9 @@ local _font = require("src.engine.modules.font")
 local _mouse = require("src.engine.modules.mouse")
 
 --- Editor
-local _components = require("src.editor.ui.components")
-local _input = require("src.editor.ui.input")
-local _theme = require("src.editor.ui.style.theme")
+local _components = require("src.engine.ui.components")
+local _input = require("src.engine.ui.input")
+local _theme = require("src.engine.ui.style.theme")
 local _highlight = require("src.editor.ui.panels.code.modules.highlight")
 local _config = require("src.editor.ui.panels.code.modules.config")
 local _state = require("src.editor.ui.panels.code.modules.state")

@@ -8,9 +8,9 @@
 local _draw = require("src.engine.modules.draw")
 
 --- Editor
-local _input = require("src.editor.ui.input")
+local _input = require("src.engine.ui.input")
 local keyboard = require("src.engine.modules.keyboard")
-local _theme = require("src.editor.ui.style.theme")
+local _theme = require("src.engine.ui.style.theme")
 
 --- @section Component
 

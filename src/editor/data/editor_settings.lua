@@ -11,8 +11,8 @@ return {
         "projects/sandbox",
     },
     sizes = {
-        left = 302,
         right = 290,
         bottom = 227,
+        left = 302,
     },
 }

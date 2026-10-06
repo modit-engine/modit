@@ -9,9 +9,9 @@ local _draw = require("src.engine.modules.draw")
 local keyboard = require("src.engine.modules.keyboard")
 
 --- Editor
-local _input = require("src.editor.ui.input")
-local _theme = require("src.editor.ui.style.theme")
-local _button = require("src.editor.ui.components.button")
+local _input = require("src.engine.ui.input")
+local _theme = require("src.engine.ui.style.theme")
+local _button = require("src.engine.ui.components.button")
 
 --- @section Constants
 

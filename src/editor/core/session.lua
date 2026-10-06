@@ -9,7 +9,7 @@ local _keyboard = require("src.engine.modules.keyboard")
 local _process = require("src.engine.backend").process
 
 --- Editor
-local _input = require("src.editor.ui.input")
+local _input = require("src.engine.ui.input")
 local _console = require("src.editor.ui.panels.console")
 local _explorer = require("src.editor.ui.panels.explorer")
 local _code = require("src.editor.ui.panels.code")

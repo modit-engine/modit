@@ -1,6 +1,27 @@
 # v0.2.0
 
+Engine UI split out of the editor.
 
+The reusable UI layer that previously lived inside the editor now belongs to the engine, so in-game UI (for example the in-game client console) no longer depends on any editor code. The editor sits on top of the engine UI rather than owning it.
+
+Changes:
+
+* Moved UI components from `editor/ui/components/` into `engine/ui/components/`
+* Moved the theme manager into the engine (`engine/ui/style/theme.lua`)
+* Moved the default theme into the engine (`engine/ui/style/themes/default.lua`), so engine UI always has a theme with no editor code required
+* Added theme registration with `theme.register()`, plus `theme.set()`, `theme.get()`, `theme.name()`, `theme.list()` and `theme.on_change()`
+* Registered themes fall back to the default theme for any missing top-level keys
+* Editor-only themes (such as `tokyo_night`) now register themselves with the engine theme manager
+* The editor now saves the active theme on close and restores it on startup
+* Editor UI reduced to the editor-specific pieces: `panels` and `style/layout`
+* Editor now draws through `engine.ui` for components, input and theme
+* Removed the duplicate default theme from the editor
+
+Notes:
+
+* The engine no longer requires anything from `src.editor`
+* Games get the default theme automatically and don't need a theme picker
+* Editor theme picker is not built yet
 
 # v0.1.0
 

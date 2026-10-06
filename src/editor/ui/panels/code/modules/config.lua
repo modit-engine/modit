@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _theme = require("src.editor.ui.style.theme")
+local _theme = require("src.engine.ui.style.theme")
 
 --- @section Configuration
 

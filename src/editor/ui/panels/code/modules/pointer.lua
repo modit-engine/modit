@@ -10,7 +10,7 @@ local _keyboard = require("src.engine.modules.keyboard")
 local _maths = require("src.engine.modules.maths")
 
 --- Editor
-local _input = require("src.editor.ui.input")
+local _input = require("src.engine.ui.input")
 local _config = require("src.editor.ui.panels.code.modules.config")
 local _state = require("src.editor.ui.panels.code.modules.state")
 local _cursor = require("src.editor.ui.panels.code.modules.cursor")

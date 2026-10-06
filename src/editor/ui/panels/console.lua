@@ -8,9 +8,9 @@
 local _font = require("src.engine.modules.font")
 
 --- Editor
-local _input = require("src.editor.ui.input")
-local _theme = require("src.editor.ui.style.theme")
-local _components = require("src.editor.ui.components")
+local _input = require("src.engine.ui.input")
+local _theme = require("src.engine.ui.style.theme")
+local _components = require("src.engine.ui.components")
 
 --- @section Constants
 

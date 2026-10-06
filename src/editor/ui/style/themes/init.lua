@@ -1,10 +1,13 @@
 --- @module themes
---- @file src/engine/ui/themes/init.lua
---- @description Provides the themes available to the engine UI.
+--- @file src/editor/ui/style/themes/init.lua
+--- @description Registers editor-only themes with the engine theme manager.
 
---- @section Module
+--- @section Imports
 
-return {
-    default = require("src.editor.ui.style.themes.default"),
-    tokyo_night = require("src.editor.ui.style.themes.tokyo_night")
-}
+local _theme = require("src.engine.ui.style.theme")
+
+--- @section Registration
+
+_theme.register("tokyo_night", require("src.editor.ui.style.themes.tokyo_night"))
+
+return {}
