@@ -8,6 +8,9 @@
 local _font = require("src.engine.modules.font")
 
 --- Editor
+local _input = require("src.engine.ui.modules.input")
+local _location = require("src.editor.core.log_location")
+local _code = require("src.editor.ui.panels.code")
 local _draw = require("src.engine.modules.draw")
 local _theme = require("src.engine.ui.modules.theme")
 local _components = require("src.engine.ui.components")
@@ -38,7 +41,7 @@ local TINT_TEXT = { warn = true, error = true, fatal = true }
 
 local function new_stream()
     return {
-        log_levels = {}, log_times = {}, log_texts = {}, log_count = 0,
+        log_levels = {}, log_times = {}, log_texts = {}, log_count = 0, locations = {},
         read_pos = 0, partial_line = "", last_level = "print",
         scroll_state = { y = 0 }, is_stick_bottom = true,
     }
@@ -47,6 +50,8 @@ end
 local streams = { client = new_stream(), server = new_stream() }
 local active_tab = "client"
 local poll_timer = 0
+local project_path
+local notice, notice_until
 
 local time_column_w = nil
 local tag_column_w = nil
@@ -59,6 +64,7 @@ local m = {}
 --- @param skip_existing boolean If true, sets read position to end of log file
 local function reset_log_state(stream, skip_existing)
     stream.log_levels, stream.log_times, stream.log_texts, stream.log_count = {}, {}, {}, 0
+    stream.locations = {}
     stream.read_pos, stream.partial_line, stream.last_level = 0, "", "print"
     stream.scroll_state.y = 0
     stream.is_stick_bottom = true
@@ -82,7 +88,10 @@ local function add_log_entry(stream, level_tag, timestamp, text_content)
     stream.log_times[stream.log_count] = timestamp
     stream.log_texts[stream.log_count] = (text_content:gsub("\t", "    "))
 
+    stream.locations[stream.log_count] = _location.parse(text_content) or false
+
     if stream.log_count > MAX_LINES then
+        table.remove(stream.locations, 1)
         table.remove(stream.log_levels, 1)
         table.remove(stream.log_times, 1)
         table.remove(stream.log_texts, 1)
@@ -149,7 +158,9 @@ end
 --- @section Functions
 
 --- Opens both project logs, keeping their histories and scroll positions separate.
-function m.open(client_path, server_path)
+function m.open(client_path, server_path, project)
+    project_path = project
+    notice = nil
     streams.client.log_path = client_path
     streams.server.log_path = server_path
     active_tab = "client"
@@ -212,6 +223,12 @@ function m.draw(viewport)
     local panel_w = viewport.w
     local panel_h = viewport.h - TITLE_H - 1
 
+    if notice and os.clock() < notice_until then
+        _components.label(notice, panel_x + PAD, panel_y + PAD, FONT_SIZE, active_theme.accent3)
+        panel_y = panel_y + LINE_H + PAD
+        panel_h = panel_h - LINE_H - PAD
+    end
+
     if stream.log_count == 0 then
         _components.label("No output", panel_x + PAD, panel_y + PAD, FONT_SIZE, active_theme.text_tertiary)
         return
@@ -243,6 +260,25 @@ function m.draw(viewport)
         local level_tag = stream.log_levels[index]
         local tag_color = log_colors[level_tag] or active_theme.text_primary
         local line_y = panel_y + PAD + (index - 1) * LINE_H - stream.scroll_state.y
+
+        local location = stream.locations[index]
+        if location then
+            local width = math.max(0, math.min(_font.width(FONT_SIZE, stream.log_texts[index]), panel_x + panel_w - 14 - text_col_x))
+            local over, clicked = _input.interact(text_col_x, line_y, width, LINE_H)
+            if over then
+                _draw.set_colour(active_theme.accent)
+                _draw.line(text_col_x, line_y + FONT_SIZE, text_col_x + width, line_y + FONT_SIZE)
+            end
+            if clicked then
+                local path, resolve_error = _location.resolve(location, project_path)
+                if path and _code.open_at(path, location.line) then
+                    notice = nil
+                else
+                    notice = path and (_code.get_notice() or "Could not open file") or resolve_error or ("File not found: " .. location.path)
+                    notice_until = os.clock() + 5
+                end
+            end
+        end
 
         _components.label(stream.log_times[index], time_col_x, line_y, FONT_SIZE, active_theme.text_tertiary)
         _components.label(TAGS[level_tag] or "", tag_col_x, line_y, FONT_SIZE, tag_color)

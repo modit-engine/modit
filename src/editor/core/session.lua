@@ -172,7 +172,7 @@ function m.open(path)
     _settings.add_recent(path)
     _settings.save()
 
-    _console.open(m.project.log, m.project.server_log)
+    _console.open(m.project.log, m.project.server_log, m.project.path)
     _explorer.open(path)
     _input.blur()
     return true

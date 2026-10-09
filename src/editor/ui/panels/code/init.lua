@@ -238,6 +238,11 @@ local function draw_editor(target_buffer, panel_x, panel_y, panel_w, panel_h, th
     local first_line = math.max(1, math.floor(scroll_y / _state.line_h) + 1)
     local last_line = math.min(#target_buffer.lines, math.floor((scroll_y + panel_h) / _state.line_h) + 1)
 
+    if target_buffer.jump_until and os.clock() < target_buffer.jump_until then
+        _draw.set_colour(theme.bg_hover)
+        _draw.rect(panel_x, panel_y + (target_buffer.jump_line - 1) * _state.line_h - scroll_y, panel_w, _state.line_h)
+    end
+
     -- Line number gutter
     for line_idx = first_line, last_line do
         local line_str = tostring(line_idx)
@@ -382,6 +387,17 @@ function m.open(file_path)
     _state.active = new_buffer
     _state.selecting = false
     _input.set_focus(_state.focus_token)
+    return true
+end
+
+--- Opens a source location without replacing an existing unsaved buffer.
+function m.open_at(file_path, line)
+    if not m.open(file_path) then return false end
+    local buffer = _state.active
+    line = math.max(1, math.min(#buffer.lines, math.floor(line)))
+    _cursor.move_to(buffer, line, 0, false)
+    _state.selecting = false
+    buffer.jump_line, buffer.jump_until = line, os.clock() + 2
     return true
 end
 
