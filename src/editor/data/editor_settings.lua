@@ -1,6 +1,7 @@
 return {
-    theme = "default",
-    minimap = true,
+    theme = "tinysprite",
+    minimap = false,
+    show_file_previews = false,
     recent = {
         "C:/Users/josh sayer/Documents/_MODIT_PROJECTS/my_new_project",
         "projects/tempproject",

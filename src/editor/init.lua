@@ -7,6 +7,7 @@
 local _engine = require("src.engine")
 local _ui = require("src.editor.ui")
 local _session = require("src.editor.core.session")
+local _menu = require("src.editor.ui.components.menu")
 local _settings = require("src.editor.core.settings")
 
 --- @section Engine UI
@@ -91,7 +92,7 @@ function m.draw()
     local regions = _ui.style.layout.shell(window_w, window_h, show_flags.left, show_flags.right, show_flags.bottom)
     local panel_sizes = _ui.style.layout.sizes
 
-    _input.set_blocked(_components.modal.is_open())
+    _input.set_blocked(_menu.blocks_content() or _components.modal.is_open())
 
     _engine.draw.set_colour(active_theme.bg_main)
     _engine.draw.rect(0, 0, window_w, window_h)
@@ -123,6 +124,7 @@ function m.draw()
         panel_sizes.bottom = _components.splitter(regions.bottom.x, regions.bottom.y - SPLIT_HANDLE_SIZE / 2, regions.bottom.w, SPLIT_HANDLE_SIZE, "y", panel_sizes.bottom, -1)
     end
 
+    _input.set_blocked(_components.modal.is_open())
     _ui.panels.toolbar.draw(regions.toolbar, active_theme)
 
     _input.set_blocked(false)

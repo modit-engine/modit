@@ -9,12 +9,12 @@ local cursor = require("src.editor.ui.panels.code.modules.cursor")
 local history = require("src.editor.ui.panels.code.modules.history")
 
 local m = { visible = false, expanded = false, query = {text="", pos=0}, replacement = {text="", pos=0}, matches = {}, index = 0 }
-local cached_text, cached_query, cached_case, cached_buffer
+local cached_text, cached_query, cached_case, cached_buffer, cached_whole
 
 function m.refresh(b)
     local text = table.concat(b.lines, "\n")
-    if cached_text == text and cached_query == m.query.text and cached_case == m.case and cached_buffer == b then return false end
-    cached_text, cached_query, cached_case, cached_buffer = text, m.query.text, m.case, b
+    if cached_text == text and cached_query == m.query.text and cached_case == m.case and cached_buffer == b and cached_whole == m.whole then return false end
+    cached_text, cached_query, cached_case, cached_buffer, cached_whole = text, m.query.text, m.case, b, m.whole
     m.matches, m.index = {}, 0
     local needle = m.case and m.query.text or m.query.text:lower()
     if needle == "" then return true end
@@ -23,7 +23,10 @@ function m.refresh(b)
         while true do
             local first, last = source:find(needle, start, true)
             if not first then break end
-            m.matches[#m.matches + 1] = {y=y, first=first, last=last}
+            local before, after = source:sub(first-1,first-1), source:sub(last+1,last+1)
+            if not m.whole or (not before:match("[%w_]") and not after:match("[%w_]")) then
+                m.matches[#m.matches + 1] = {y=y, first=first, last=last}
+            end
             start = last + 1
         end
     end
@@ -140,7 +143,7 @@ function m.draw(b, x, y, w, theme)
     local height = m.expanded and 70 or 36
     draw.set_colour(theme.bg_panel);draw.rect(x,y,w,height)
     draw.push_clip(x,y,w,height)
-    local fw=math.max(60,w-340)
+    local fw=math.max(60,w-382)
     field(m.query,x+8,y+5,fw,"Find",theme)
     local refreshed=m.refresh(b)
     if refreshed then m.select(b,nearest(b)) end
@@ -153,11 +156,14 @@ function m.draw(b, x, y, w, theme)
     if ui.button("Aa",bx+62,y+5,32,26,16,m.case and theme.accent or theme.text_secondary) then
         m.case=not m.case;m.refresh(b);m.select(b,nearest(b))
     end
-    if ui.button(m.expanded and "Hide" or "Replace",bx+98,y+5,72,26) then
+    if ui.button("|ab|",bx+98,y+5,40,26,14,m.whole and theme.accent or theme.text_secondary) then
+        m.whole=not m.whole;m.refresh(b);m.select(b,nearest(b))
+    end
+    if ui.button(m.expanded and "Hide" or "Replace",bx+142,y+5,72,26) then
         m.expanded=not m.expanded
         if not m.expanded and input.has_focus(m.replacement) then input.set_focus(m.query) end
     end
-    if ui.button("x",bx+176,y+5,26,26) then m.close() end
+    if ui.button("x",bx+220,y+5,26,26) then m.close() end
     if m.expanded then
         field(m.replacement,x+8,y+39,fw,"Replace with",theme)
         if ui.button("Replace",x+fw+14,y+39,90,26) then m.replace(b,false) end

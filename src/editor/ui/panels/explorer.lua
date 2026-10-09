@@ -13,6 +13,10 @@ local _fs = _backend.filesystem
 --- Editor
 local _components = require("src.engine.ui.components")
 local _input = require("src.engine.ui.modules.input")
+local _ffi = require("ffi")
+local _ray = require("src.engine.backend.raylib.ffi").lib
+local _import = require("src.editor.core.import_files")
+local _settings = require("src.editor.core.settings")
 local _image = require("src.editor.ui.panels.image")
 local _theme = require("src.engine.ui.modules.theme")
 
@@ -45,6 +49,7 @@ local tree_rows = {}
 local tree_row_count = 0
 
 local edit_state = nil
+local import_notice, import_until
 
 --- @section Helpers
 
@@ -254,6 +259,7 @@ end
 --- @param dir_path string Directory path to load as tree root
 function m.open(dir_path)
     _image.clear_thumbnails()
+    import_notice = nil
     root_path = dir_path
     expanded_paths = {}
     selected_path, is_selected_dir = nil, false
@@ -300,9 +306,21 @@ function m.draw(viewport)
 
     draw_header_actions(viewport, active_theme)
 
+    local dropped
+    local drop_target = root_path
+    if _ray.IsFileDropped() then
+        local list = _ray.LoadDroppedFiles()
+        dropped = {}
+        for i=0,tonumber(list.count)-1 do dropped[#dropped+1]=_ffi.string(list.paths[i]) end
+        _ray.UnloadDroppedFiles(list)
+        if edit_state or _components.modal.is_open() or not _input.in_rect(panel_x,panel_y,panel_w,panel_h) then
+            dropped = nil
+            import_notice, import_until = "Drop onto a folder in Files.", os.clock()+6
+        end
+    end
+
     if tree_row_count == 0 then
         _components.label("Empty folder", panel_x + PAD + 4, panel_y + PAD + 2, 16, active_theme.text_tertiary)
-        return
     end
 
     local is_pressed = _input.pressed()
@@ -335,6 +353,7 @@ function m.draw(viewport)
         else
             local is_hovered = _input.in_rect(panel_x, row_y, panel_w, ROW_H)
             if is_hovered then 
+                if dropped then drop_target = tree_row.dir and tree_row.path or parent_of(tree_row.path) end
                 hit_row = true 
             end
 
@@ -365,7 +384,7 @@ function m.draw(viewport)
                 end
             else
                 local name_x = text_x + 16
-                if not tree_row.dir and _image.supports(tree_row.path) then
+                if _settings.show_file_previews and not tree_row.dir and _image.supports(tree_row.path) then
                     _image.thumbnail(tree_row.path, name_x, row_y + 3, 18, active_theme)
                     name_x = name_x + 24
                 end
@@ -390,6 +409,26 @@ function m.draw(viewport)
     end
 
     _components.scroll_end()
+
+    if dropped and #dropped>0 then
+        local count, err, completed = _import.copy(dropped,drop_target,root_path)
+        if count then
+            import_notice = ("Imported %d item(s) into %s"):format(count,drop_target:match("[^/]+$"))
+        else
+            import_notice = ("Import stopped (%d completed). %s"):format(completed or 0,err)
+            print(import_notice)
+        end
+        import_until = os.clock()+8
+        expanded_paths[drop_target] = true
+        rescan_tree()
+    end
+    if import_notice and os.clock()<import_until then
+        _draw.push_clip(panel_x,viewport.y+viewport.h-28,panel_w,28)
+        _draw.set_colour(active_theme.bg_panel)
+        _draw.rect(panel_x,viewport.y+viewport.h-28,panel_w,28)
+        _components.label(import_notice,panel_x+PAD,viewport.y+viewport.h-22,14,active_theme.text_secondary)
+        _draw.pop_clip()
+    end
 
     if edit_state and edit_state.error then
         _components.label(edit_state.error, panel_x + PAD + 4, viewport.y + viewport.h - 24, 16, active_theme.accent3)
