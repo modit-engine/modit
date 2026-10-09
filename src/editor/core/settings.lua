@@ -16,7 +16,6 @@ local DEFAULT_THEME = "default"
 --- @section Initialisation
 
 local m = { theme = DEFAULT_THEME, recent = {}, sizes = {}, minimap = true, show_file_previews = true }
-
 --- @section Functions
 
 --- Reads editor settings from disk and populates theme, recent projects, and layout sizes in a sandboxed environment
