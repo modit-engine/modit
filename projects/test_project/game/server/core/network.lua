@@ -2,10 +2,14 @@
 --- @file src/planetlua/server/core/network.lua
 --- @description Server-side TCP listener, handshake and player management.
 
+--- @section Imports
+
 local _net = require("src.engine.modules.network")
 local _connection = require("projects.test_project.game.shared.net.connection")
 local _hooks = require("src.engine.modules.hooks")
 local _log = require("src.engine.core.log")
+
+--- @section Initialiation
 
 local m = {
     port = 7777,
@@ -15,20 +19,7 @@ local m = {
     closed = false,
 }
 
-function m.init()
-    if m.listener then return true end
-
-    local listener, err = _net.tcp_listen(m.port)
-    if not listener then error("network: failed to listen on port " .. m.port .. ": " .. tostring(err)) end
-
-    m.listener = listener
-    m.clients = {}
-    m.next_id = 1
-    m.closed = false
-
-    _log.print("success", ("network listening on port %d"):format(m.port))
-    return true
-end
+--- @section Helpers
 
 local function remove_client(client, reason)
     if client.removed then return end
@@ -99,6 +90,23 @@ local function poll_client(client)
 
     local ok, flush_err = _connection.flush(client.connection)
     if not ok then remove_client(client, flush_err) end
+end
+
+--- @section Functions
+
+function m.init()
+    if m.listener then return true end
+
+    local listener, err = _net.tcp_listen(m.port)
+    if not listener then error("network: failed to listen on port " .. m.port .. ": " .. tostring(err)) end
+
+    m.listener = listener
+    m.clients = {}
+    m.next_id = 1
+    m.closed = false
+
+    _log.print("success", ("network listening on port %d"):format(m.port))
+    return true
 end
 
 function m.update()

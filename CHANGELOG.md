@@ -10,6 +10,7 @@ Changes:
 * Editor updated to support project templates *(templates are not complete support is there)*
 * Editor can now run server or client and only offers server options if enabled in game config
 * Changes to runner to support the server side correctly
+* General clean up
 
 Notes:
 

@@ -1,4 +1,17 @@
-debug	04:03:04	[hooks] registered: update
-debug	04:03:04	[hooks] registered: draw
-debug	04:03:04	[hooks] registered: console_toggled
-debug	04:03:04	[hooks] registered: hud
+debug	04:43:43	[hooks] registered: update
+debug	04:43:43	[hooks] registered: draw
+debug	04:43:43	[hooks] registered: console_toggled
+debug	04:43:43	[hooks] registered: hud
+success	04:43:43	connected to server
+success	04:43:43	server assigned player id 1
+debug	04:43:49	[hooks] listener added: console_toggled (default_world)
+debug	04:43:49	[hooks] listener added: update (default_world)
+debug	04:43:49	[hooks] listener added: draw (default_world)
+debug	04:43:49	[hooks] listener added: hud (default_world)
+success	04:43:49	default_world started (client)
+debug	04:43:49	[hooks] listener added: update (demo_tools)
+debug	04:43:49	[hooks] listener added: draw (demo_tools)
+success	04:43:49	demo_tools started (client)
+info	04:54:10	server disconnected: connection reset
+info	04:54:11	demo_tools stopped
+info	04:54:11	default_world stopped

@@ -2,16 +2,26 @@
 --- @file src/planetlua/server/core/terminal.lua
 --- @description Non-blocking console line input for the headless server (Windows).
 
+--- @section FFI
+
 local _ffi = require("ffi")
 
 pcall(_ffi.cdef, "int _kbhit(void); int _getch(void);")
 local _crt = _ffi.load("msvcrt")
 
+--- @section Constants
+
 local PROMPT = "> "
+
+--- @section Variables
+
+local buffer = ""
+
+--- @section Initialisation
 
 local m = {}
 
-local buffer = ""
+--- @section Functions
 
 --- Prepares the console
 function m.init()
@@ -25,7 +35,7 @@ function m.poll(on_line)
     while _crt._kbhit() ~= 0 do
         local key = _crt._getch()
         if key == 0 or key == 224 then
-            _crt._getch() -- swallow the second byte of arrow and function keys
+            _crt._getch()
         elseif key == 13 then
             io.write("\n")
             local line = buffer

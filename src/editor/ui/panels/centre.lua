@@ -124,7 +124,6 @@ local function draw_start_screen(viewport, theme)
     local current_x = viewport.x + (viewport.w - column_width) / 2
     local current_y = viewport.y + 36
 
-    -- Fixed layout above the list: title (48) + button (44) + "Open" label (24)
     local list_top = current_y + 48 + 44 + 24
     local list_height = viewport.y + viewport.h - list_top - 24
     local overflows = #entries * ROW_H > list_height
