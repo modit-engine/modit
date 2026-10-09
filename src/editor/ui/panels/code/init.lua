@@ -21,6 +21,8 @@ local _cursor = require("src.editor.ui.panels.code.modules.cursor")
 local _files = require("src.editor.ui.panels.code.modules.files")
 local _keys = require("src.editor.ui.panels.code.modules.keys")
 local _pointer = require("src.editor.ui.panels.code.modules.pointer")
+local _minimap = require("src.editor.ui.panels.code.modules.minimap")
+local _settings = require("src.editor.core.settings")
 
 --- @section Constants
 
@@ -427,7 +429,14 @@ function m.draw(viewport)
     local active_buffer = _state.active
     if not active_buffer then return end
 
-    draw_editor(active_buffer, viewport.x, viewport.y + TAB_H, viewport.w, viewport.h - TAB_H - STATUS_H, theme)
+    local map_w = _settings.minimap and viewport.w >= 440 and 160 or 0
+    local editor_h = viewport.h - TAB_H - STATUS_H
+    draw_editor(active_buffer, viewport.x, viewport.y + TAB_H, viewport.w - map_w, editor_h, theme)
+    if map_w > 0 and editor_h > 0 then
+        _minimap.draw(active_buffer, viewport.x + viewport.w - map_w, viewport.y + TAB_H, map_w, editor_h, theme)
+    else
+        _minimap.cancel_drag()
+    end
     draw_status(active_buffer, viewport, theme)
 end
 

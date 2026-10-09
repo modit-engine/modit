@@ -11,6 +11,7 @@ local _keyboard = require("src.engine.modules.keyboard")
 local _config = require("src.editor.ui.panels.code.modules.config")
 local _buffer = require("src.editor.ui.panels.code.modules.buffer")
 local history = require("src.editor.ui.panels.code.modules.history")
+local highlight = require("src.editor.ui.panels.code.modules.highlight")
 
 --- @section Constants
 
@@ -34,6 +35,51 @@ local function opens_block(statement)
         or statement:match("function%s*[%w_.:]*%s*%b()$") ~= nil
 end
 
+--- Aligns a standalone Lua end with its unmatched opening block. Reuse the
+--- highlighter so keywords inside comments and strings never affect nesting.
+local function align_end(buffer)
+    if not buffer.lua then return end
+    local line = buffer.lines[buffer.cy]
+    local spaces = line:match("^( *)end%s*$")
+    if not spaces or buffer.cx ~= #spaces + 3 then return end
+
+    highlight.update(buffer, buffer.cy)
+    if buffer.hl[buffer.cy].state_in then return end
+    local stack = {}
+    for i = 1, buffer.cy - 1 do
+        local source = buffer.lines[i]
+        for _, token in ipairs(buffer.hl[i].toks) do
+            if token.kind == "control" then
+                local word = source:sub(token.s, token.e)
+                local top = stack[#stack]
+                if word == "if" or word == "function" or word == "for" or word == "while" or word == "repeat" then
+                    stack[#stack + 1] = {
+                        kind = word, indent = #source:match("^ *"),
+                        awaiting_do = word == "for" or word == "while",
+                    }
+                elseif word == "do" then
+                    if top and top.awaiting_do then
+                        top.awaiting_do = false
+                    else
+                        stack[#stack + 1] = { kind = "do", indent = #source:match("^ *") }
+                    end
+                elseif word == "end" or word == "until" then
+                    if top and ((word == "until") == (top.kind == "repeat")) then
+                        table.remove(stack)
+                    end
+                end
+            end
+        end
+    end
+
+    local opener = stack[#stack]
+    if not opener or opener.kind == "repeat" or opener.indent >= #spaces then return end
+    local aligned = string.rep(" ", opener.indent) .. line:sub(#spaces + 1)
+    buffer.lines[buffer.cy] = aligned
+    buffer.cx = buffer.cx - (#spaces - opener.indent)
+    buffer.auto_end = { line = buffer.cy, before = line, after = aligned, cx = buffer.cx }
+end
+
 --- @section Functions
 
 --- Inserts arbitrary text at current cursor location or replaces selection
@@ -42,8 +88,18 @@ end
 --- @param edit_kind string|nil Optional undo history transaction kind (defaults to "edit")
 function m.insert(target_buffer, text, edit_kind)
     history.begin_edit(target_buffer, edit_kind or "edit")
+    -- Typing "endpoint" must not leave the temporary "end" prefix dedented.
+    local pending = target_buffer.auto_end
+    target_buffer.auto_end = nil
+    if pending and edit_kind == "type" and text:match("^[%w_]")
+        and not _buffer.selection(target_buffer) and target_buffer.cy == pending.line
+        and target_buffer.cx == pending.cx and target_buffer.lines[pending.line] == pending.after then
+        target_buffer.lines[pending.line] = pending.before
+        target_buffer.cx = target_buffer.cx + #pending.before - #pending.after
+    end
     _buffer.delete_selection(target_buffer)
     _buffer.insert_text(target_buffer, text)
+    if edit_kind == "type" then align_end(target_buffer) end
 end
 
 --- Removes character behind cursor or deletes current selection
