@@ -4,18 +4,19 @@
 
 --- @section Imports
 
---- Editor
+--- Engine
 local _draw = require("src.engine.modules.draw")
 local _font = require("src.engine.modules.font")
-
---- Engine
-local _theme = require("src.engine.ui.style.theme")
-local _input = require("src.engine.ui.input")
+local _theme = require("src.engine.ui.modules.theme")
+local _input = require("src.engine.ui.modules.input")
 local _components = require("src.engine.ui.components")
+
+--- Editor
 local _code = require("src.editor.ui.panels.code")
 local _session = require("src.editor.core.session")
 local _settings = require("src.editor.core.settings")
 local _projects = require("src.editor.core.projects")
+local _new_project = require("src.editor.ui.panels.new_project")
 
 --- @section Constants
 
@@ -23,6 +24,7 @@ local ROW_H = 34
 local OPEN_W = 60
 local DEL_W = 70
 local BTN_H = 24
+local SCROLL_GUTTER = 12
 
 --- @section Initialisation
 
@@ -114,39 +116,31 @@ end
 --- @param viewport table Viewport bounding rectangle { x, y, w, h }
 --- @param theme table Active theme color mapping
 local function draw_start_screen(viewport, theme)
-    if seen_version ~= _session.version then 
-        refresh_project_list() 
+    if seen_version ~= _session.version then
+        refresh_project_list()
     end
 
     local column_width = math.min(460, viewport.w - 40)
     local current_x = viewport.x + (viewport.w - column_width) / 2
     local current_y = viewport.y + 36
 
+    -- Fixed layout above the list: title (48) + button (44) + "Open" label (24)
+    local list_top = current_y + 48 + 44 + 24
+    local list_height = viewport.y + viewport.h - list_top - 24
+    local overflows = #entries * ROW_H > list_height
+    local content_w = overflows and column_width - SCROLL_GUTTER or column_width
+
     _components.label("Projects", current_x, current_y, 28, theme.text_primary)
-    _components.label("New project", current_x, current_y + 48, 16, theme.text_secondary)
-    current_y = current_y + 72
+    current_y = current_y + 48
 
-    local button_width = 90
-    local is_submitted = _components.textfield(new_project_input, current_x, current_y, column_width - button_width - 8, 30, "[%w_%-]", "project_name")
-    local is_clicked = _components.button("Create", current_x + column_width - button_width, current_y, button_width, 30)
-    if is_submitted or is_clicked then
-        create_error_message = _session.create(new_project_input.text)
-        if not create_error_message then 
-            new_project_input.text = "" 
-        end
+    if _components.button("New Project", current_x, current_y, content_w, 30) then
+        _new_project.open()
     end
-    current_y = current_y + 38
+    current_y = current_y + 44
 
-    if create_error_message then
-        _components.label(create_error_message, current_x, current_y, 16, theme.accent3)
-        current_y = current_y + 22
-    end
-
-    current_y = current_y + 14
     _components.label("Open", current_x, current_y, 16, theme.text_secondary)
     current_y = current_y + 24
 
-    local list_height = viewport.y + viewport.h - current_y - 24
     if list_height < ROW_H then return end
 
     if #entries == 0 then
@@ -156,7 +150,7 @@ local function draw_start_screen(viewport, theme)
 
     _components.scroll_begin(list_scroll_state, current_x, current_y, column_width, list_height, #entries * ROW_H)
     for index = 1, #entries do
-        draw_project_row(entries[index], current_x, current_y + (index - 1) * ROW_H - list_scroll_state.y, column_width - 12, ROW_H - 4, theme)
+        draw_project_row(entries[index], current_x, current_y + (index - 1) * ROW_H - list_scroll_state.y, content_w, ROW_H - 4, theme)
     end
     _components.scroll_end()
 end
@@ -189,7 +183,9 @@ function m.draw(viewport)
     local theme = _theme.get()
 
     _draw.push_clip(viewport.x, viewport.y, viewport.w, viewport.h)
-    if not _session.project then
+    if _new_project.is_open() then
+        _new_project.draw(viewport, theme)
+    elseif not _session.project then
         draw_start_screen(viewport, theme)
     elseif _code.has_open() then
         _code.draw(viewport)

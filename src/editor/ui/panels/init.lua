@@ -7,4 +7,5 @@ return {
     console = require("src.editor.ui.panels.console"),
     explorer = require("src.editor.ui.panels.explorer"),
     toolbar = require("src.editor.ui.panels.toolbar"),
+    new_project = require("src.editor.ui.panels.new_project")
 }

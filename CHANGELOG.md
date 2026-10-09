@@ -1,3 +1,21 @@
+# v0.4.0
+
+Add in test game and port modules into engine.
+
+Changes:
+
+* Too many to really name? will cover important ones
+* Headless server support built into core
+* Built in commands for headless server moved
+* Editor updated to support project templates *(templates are not complete support is there)*
+* Editor can now run server or client and only offers server options if enabled in game config
+* Changes to runner to support the server side correctly
+
+Notes:
+
+* Still alot of changes to go in porting in the sample game code from a build before deciding to make the engine.
+* API should be passed and used correctly within game files instead of requires *(left over from old)*
+
 # v0.3.0
 
 Raylib 6.0 and generated bindings.
@@ -49,16 +67,16 @@ A lot was done before the first GitHub upload, with previous development taking 
 
 Modit is mostly a rebuild of my old [lua_game_engine](https://github.com/CaseIRL/lua_game_engine) project, but with a small editor attached and a much better direction.
 
-The goal is to build a small-footprint game engine around a development experience similar to FiveM, with modding and resource support being a core part of the engine rather than something added afterwards.
+The goal is to build a small-footprint game engine around a development experience similar to FiveM, with modding and mod support being a core part of the engine rather than something added afterwards.
 
 Some of the API concepts are intentionally familiar:
 
 * `exports()`
 * `json.encode()`
 * `json.decode()`
-* Resource manifests
-* Resource dependencies
-* Resource lifecycle management
+* Mod manifests
+* Mod dependencies
+* Mod lifecycle management
 * Client/server/shared execution
 * Hooks and events
 
@@ -80,7 +98,7 @@ Current editor:
 * Editor panels
 * 3D viewport foundations
 * Themes and styling
-* Project/resource tooling
+* Project/mod tooling
 
 Current backend/runtime foundations:
 
@@ -94,7 +112,7 @@ Current backend/runtime foundations:
 * Windows networking backend
 * Windows HTTP/HTTPS backend
 * Client/server runtime foundations
-* Resource loading and lifecycle management
+* Mod loading and lifecycle management
 * Fixed-rate server ticking
 * Headless server foundations
 * Logging and log history

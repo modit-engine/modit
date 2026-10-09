@@ -12,8 +12,8 @@ local _fs = _backend.filesystem
 
 --- Editor
 local _components = require("src.engine.ui.components")
-local _input = require("src.engine.ui.input")
-local _theme = require("src.engine.ui.style.theme")
+local _input = require("src.engine.ui.modules.input")
+local _theme = require("src.engine.ui.modules.theme")
 
 --- @section Constants
 
@@ -282,9 +282,6 @@ function m.update(delta_time)
     if not edit_state and not _components.modal.is_open() then
         if _keyboard.pressed("f2") then 
             begin_rename() 
-        end
-        if _keyboard.pressed("delete") then 
-            ask_delete_selected() 
         end
     end
 end

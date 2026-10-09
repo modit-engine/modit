@@ -1,6 +1,6 @@
 --- @module hooks
 --- @file src/engine/core/hooks.lua
---- @description Event hook system. Listeners can be tagged with an owner so a whole resource can be unhooked at once.
+--- @description Event hook system. Listeners can be tagged with an owner so a whole mod can be unhooked at once.
 
 --- @section Imports
 
@@ -117,7 +117,7 @@ function m.unlisten(name, callback)
 end
 
 --- Removes every listener tagged with an owner
---- @param owner string Owner tag, for example a resource name
+--- @param owner string Owner tag, for example a mod name
 function m.remove_owner(owner)
     for _, list in pairs(registered) do
         for _, entry in ipairs(list) do

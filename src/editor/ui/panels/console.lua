@@ -8,8 +8,8 @@
 local _font = require("src.engine.modules.font")
 
 --- Editor
-local _input = require("src.engine.ui.input")
-local _theme = require("src.engine.ui.style.theme")
+local _input = require("src.engine.ui.modules.input")
+local _theme = require("src.engine.ui.modules.theme")
 local _components = require("src.engine.ui.components")
 
 --- @section Constants

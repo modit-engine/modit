@@ -1,6 +1,6 @@
 --- @module font
 --- @file src/engine/modules/font.lua
---- @description Font resource loading, glyph caching, text measurement, and rendering facade. 
+--- @description Font mod loading, glyph caching, text measurement, and rendering facade. 
 
 --- @section Imports
 
@@ -42,7 +42,7 @@ function m.load(path, size, codepoints)
     }
 end
 
---- Frees a loaded font resource and invalidates cache entries 
+--- Frees a loaded font mod and invalidates cache entries 
 --- @param f table Font table instance to unload 
 function m.free(f)
     _backend.font_free(f.handle) 

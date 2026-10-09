@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _default = require("src.engine.ui.style.themes.default")
+local _default = require("src.engine.ui.themes.default")
 
 --- @section Initialisation
 

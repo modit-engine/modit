@@ -26,9 +26,12 @@ local m = {}
 --- @param statement string Line text preceding cursor
 --- @return boolean opens True if line ending opens a block
 local function opens_block(statement)
-    return statement:match("%f[%w_]then(") or statement:match("%f[%w_]do)") or statement:match("%f[%w_]else$")
-        or statement:match("%f[%w_]repeat(") or statement:match("{)")
-        or statement:match("function%s*[%w_.:]*%s*%b()$")
+    return statement:match("%f[%w_]then%f[^%w_]") 
+        or statement:match("%f[%w_]do%f[^%w_]") 
+        or statement:match("%f[%w_]else$") 
+        or statement:match("%f[%w_]repeat%f[^%w_]") 
+        or statement:match("{%s*$")
+        or statement:match("function%s*[%w_.:]*%s*%b()$") ~= nil
 end
 
 --- @section Functions

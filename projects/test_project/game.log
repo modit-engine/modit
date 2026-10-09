@@ -1,0 +1,4 @@
+debug	04:03:04	[hooks] registered: update
+debug	04:03:04	[hooks] registered: draw
+debug	04:03:04	[hooks] registered: console_toggled
+debug	04:03:04	[hooks] registered: hud

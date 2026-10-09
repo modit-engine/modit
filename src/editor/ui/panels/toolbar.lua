@@ -10,9 +10,10 @@ local _font = require("src.engine.modules.font")
 local _window = require("src.engine.core.window")
 
 --- Editor
-local _theme = require("src.engine.ui.style.theme")
+local _theme = require("src.engine.ui.modules.theme")
 local _components = require("src.engine.ui.components")
 local _session = require("src.editor.core.session")
+local _new_project = require("src.editor.ui.panels.new_project")
 
 --- @section Constants
 
@@ -69,19 +70,6 @@ local function render_menu_dropdown(menu_id, label, items, toolbar_bounds)
     return choice, sub
 end
 
---- Opens modal confirmation dialog to create a new project
-local function open_new_project_dialog()
-    _components.modal.open({
-        title = "New Project",
-        message = _session.project and "Project name (closes current one):" or "Project name:",
-        input = { text = "" },
-        filter = "[%w_%-]",
-        placeholder = "project_name",
-        confirm_label = "Create",
-        on_confirm = _session.create,
-    })
-end
-
 --- @section Functions
 
 --- Renders top toolbar UI including menus, execution actions, and session status label
@@ -101,7 +89,7 @@ function m.draw(toolbar_bounds, active_theme)
     local picked_option = file_choice and file_items[file_choice]
 
     if picked_option == "New Project" then
-        open_new_project_dialog()
+        _new_project.open()
     elseif picked_option == "Close Project" then
         _session.close_project()
     elseif picked_option == "Exit" then
@@ -119,25 +107,56 @@ function m.draw(toolbar_bounds, active_theme)
 
     cursor_x = cursor_x + 12
 
-    -- Execution Controls & Status
+    -- Execution Controls
     if _session.project then
+        -- Client Controls
         if _session.is_running() then
-            if render_action_button("Reload", toolbar_bounds) then
+            if render_action_button("Reload Client", toolbar_bounds) then
                 _session.run()
             end
-            if render_action_button("Stop", toolbar_bounds) then
+
+            if render_action_button("Stop Client", toolbar_bounds) then
                 _session.stop()
             end
         else
-            if render_action_button("Run", toolbar_bounds) then
+            if render_action_button("Run Client", toolbar_bounds) then
                 _session.run()
             end
         end
 
-        local status_label = _session.status_text()
+        -- Server Controls
+        if _session.has_server() then
+            if _session.is_server_running() then
+                if render_action_button("Reload Server", toolbar_bounds) then
+                    _session.run_server()
+                end
+
+                if render_action_button("Stop Server", toolbar_bounds) then
+                    _session.stop_server()
+                end
+            else
+                if render_action_button("Run Server", toolbar_bounds) then
+                    _session.run_server()
+                end
+            end
+        end
+
+        -- Session Status
+        local client_status = "Client: " .. _session.status_text()
+        local server_status = _session.has_server() and (" | Server: " .. (_session.is_server_running() and "Running" or "Stopped")) or ""
+
+        local status_label = client_status .. server_status
         local label_y = toolbar_bounds.y + math.floor((toolbar_bounds.h - 16) / 2)
-        _components.label(status_label, toolbar_bounds.x + toolbar_bounds.w - _font.width(16, status_label) - 14, label_y, 16, _session.status_colour(active_theme))
+
+        _components.label(
+            status_label,
+            toolbar_bounds.x + toolbar_bounds.w - _font.width(16, status_label) - 14,
+            label_y,
+            16,
+            _session.status_colour(active_theme)
+        )
     end
+
 end
 
 return m

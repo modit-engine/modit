@@ -7,7 +7,7 @@
 local _draw = require("src.engine.modules.draw")
 local _mouse = require("src.engine.modules.mouse")
 local _keyboard = require("src.engine.modules.keyboard")
-local _theme = require("src.engine.ui.style.theme")
+local _theme = require("src.engine.ui.modules.theme")
 local _font = require("src.engine.modules.font")
 
 --- @section Constants & State
@@ -445,7 +445,7 @@ end
 
 local LAZY = {
     components = "src.engine.ui.components",
-    input = "src.engine.ui.input",
+    input = "src.engine.ui.modules.input",
 }
 
 setmetatable(m, {

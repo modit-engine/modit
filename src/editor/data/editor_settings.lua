@@ -1,14 +1,12 @@
 return {
     theme = "default",
     recent = {
+        "projects/test_project",
+        "projects/teststarter",
+        "projects/testempty",
+        "projects/somenew",
+        "projects/anothertest",
         "projects/sample_project",
-        "projects/newproject",
-        "projects/new_project",
-        "projects/sample_game",
-        "projects/othernew",
-        "projects/test",
-        "projects/test5",
-        "projects/sandbox",
     },
     sizes = {
         right = 290,

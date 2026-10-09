@@ -13,7 +13,7 @@ local conf = require("src.editor.core.config")
 local version_check = require("src.engine.core.version_check")
 local version = require("src.version")
 local window, draw = engine.window, engine.draw
-local input = require("src.engine.ui.input")
+local input = require("src.engine.ui.modules.input")
 
 --- @section Initialisation
 

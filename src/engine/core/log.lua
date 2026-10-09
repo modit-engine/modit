@@ -131,14 +131,10 @@ function m.print(level, msg, data)
         text = text .. " " .. serialize(data)
     end
 
+    local line = ("[%s] [%s]: %s"):format(os.date("%H:%M:%S"), level:upper(), text)
+
     local palette = get_palette()
-    io.write(("%s[%s] [%s]: %s%s\n"):format(
-        palette[level],
-        os.date("%Y-%m-%d %H:%M:%S"),
-        level:upper(),
-        text,
-        palette.reset
-    ))
+    io.write(palette[level], line, palette.reset, "\n")
 
     HISTORY_BUFFER[#HISTORY_BUFFER + 1] = { level = level, text = text }
     if #HISTORY_BUFFER > HISTORY_MAX_CAPACITY then
@@ -146,7 +142,7 @@ function m.print(level, msg, data)
     end
 
     if m.sink then
-        m.sink(level, text)
+        m.sink(level, text, line)
     end
 
     if level == "fatal" then

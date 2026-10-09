@@ -8,6 +8,11 @@ local _draw = require("src.engine.modules.draw")
 local _mouse = require("src.engine.modules.mouse")
 local _keyboard = require("src.engine.modules.keyboard")
 local _font = require("src.engine.modules.font")
+local _theme = require("src.engine.ui.modules.theme")
+
+--- @section Constants
+
+local SCROLL_SPEED = 54
 
 --- @section Initialisation
 
@@ -20,10 +25,14 @@ local wheel_delta = 0
 local next_element_id = 0
 local hot_id, active_id = nil, nil
 local active_cursor = "default"
+local drag_origin, drag_value = 0, 0
+
 local is_blocked = false
 
 local typed_chars, char_count = {}, 0
 local active_focus = nil
+
+local scroll_stack, scroll_depth = {}, 0
 
 --- @section Text Helpers
 
@@ -130,6 +139,12 @@ function m.down()
     return is_down
 end
 
+--- Returns mouse left button released state for current frame
+--- @return boolean is_released True on frame button release
+function m.released()
+    return is_released
+end
+
 --- Generates a unique UI element identifier
 --- @return number id Generated unique ID
 function m.new_id()
@@ -178,8 +193,9 @@ function m.begin_frame()
     next_element_id = 0
     hot_id = nil
     active_cursor = "default"
-
     char_count = 0
+    scroll_depth = 0
+
     while true do
         local character_code = _keyboard.get_char()
         if character_code == 0 then break end
@@ -221,6 +237,213 @@ end
 --- @return number char_count Count of character codes in list
 function m.typed()
     return typed_chars, char_count
+end
+
+--- @section Text Input
+
+--- Renders interactive single-line text input field
+--- @param state table State container table containing `.text` string and optional `.max` length limit
+--- @param x number X position
+--- @param y number Y position
+--- @param w number Width
+--- @param h number Height
+--- @param filter string|nil Optional Lua pattern character filter
+--- @param placeholder string|nil Optional placeholder text when empty
+--- @return boolean submitted True if Enter key was pressed while focused
+function m.textfield(state, x, y, w, h, filter, placeholder)
+    local theme = _theme.get()
+
+    next_element_id = next_element_id + 1
+    local element_id = next_element_id
+    local over = m.in_rect(x, y, w, h)
+
+    if over then
+        hot_id = element_id
+        active_cursor = "text"
+    end
+
+    if is_pressed then
+        if over then
+            active_focus = state
+        elseif active_focus == state then
+            active_focus = nil
+        end
+    end
+
+    local focused = active_focus == state
+    local submitted = false
+
+    if focused then
+        local max_length = state.max or 32
+        for i = 1, char_count do
+            local char_code = typed_chars[i]
+            if char_code >= 32 and char_code < 127 then
+                local ch = string.char(char_code)
+                if (not filter or ch:match(filter)) and #state.text < max_length then
+                    state.text = state.text .. ch
+                end
+            end
+        end
+
+        if _keyboard.pressed("backspace") or _keyboard.pressed_repeat("backspace") then
+            state.text = state.text:sub(1, -2)
+        end
+
+        if _keyboard.pressed("enter") then
+            submitted = true
+        end
+
+        if _keyboard.pressed("escape") then
+            active_focus = nil
+        end
+    end
+
+    local bg = theme.bg_input
+    if focused or over then
+        bg = theme.bg_hover
+    end
+
+    _draw.set_colour(bg)
+    _draw.rect(x, y, w, h)
+
+    local size, pad = 16, 8
+    local inner_w = w - pad * 2
+    local text_y = y + (h - size) / 2
+
+    _draw.push_clip(x + pad, y, inner_w, h)
+        if state.text == "" and not focused and placeholder then
+            _draw.set_colour(theme.text_tertiary)
+            m.text(placeholder, x + pad, text_y, size)
+        else
+            local text_w = m.measure(state.text, size)
+            local offset_x = math.max(0, text_w - inner_w + 2)
+
+            _draw.set_colour(theme.text_primary)
+            m.text(state.text, x + pad - offset_x, text_y, size)
+
+            if focused and math.floor(os.clock() * 2) % 2 == 0 then
+                _draw.set_colour(theme.accent)
+                _draw.rect(x + pad - offset_x + text_w + 1, y + 6, 2, h - 12)
+            end
+        end
+    _draw.pop_clip()
+
+    return submitted
+end
+
+--- @section Splitter
+
+--- Renders panel resizing interactive splitter handle
+--- @param x number X position
+--- @param y number Y position
+--- @param w number Width
+--- @param h number Height
+--- @param axis string Resize movement axis ("x" or "y")
+--- @param value number Current dimension value
+--- @param dir number Value multiplier direction (1 or -1)
+--- @return number new_value Updated dimension value
+--- @return boolean is_dragging True if currently being dragged
+function m.splitter(x, y, w, h, axis, value, dir)
+    next_element_id = next_element_id + 1
+    local element_id = next_element_id
+    local theme = _theme.get()
+
+    local over = m.in_rect(x, y, w, h)
+    if over then
+        hot_id = element_id
+        if is_pressed then
+            active_id = element_id
+            drag_origin = axis == "x" and mouse_x or mouse_y
+            drag_value = value
+        end
+    end
+
+    local dragging = active_id == element_id and is_down
+
+    if over or dragging then
+        active_cursor = axis == "x" and "resize_h" or "resize_v"
+        _draw.set_colour(dragging and theme.accent or theme.accent2)
+        if axis == "x" then
+            _draw.rect(x + w / 2 - 1, y, 2, h)
+        else
+            _draw.rect(x, y + h / 2 - 1, w, 2)
+        end
+    end
+
+    if dragging then
+        local current_pos = axis == "x" and mouse_x or mouse_y
+        return drag_value + (current_pos - drag_origin) * dir, true
+    end
+
+    return value, false
+end
+
+--- @section Scroll Region Management
+
+--- Begins a scrollable clipping container region
+--- @param state table Scroll region state container with `.y` vertical scroll offset
+--- @param x number Container X position
+--- @param y number Container Y position
+--- @param w number Container visible width
+--- @param h number Container visible height
+--- @param content_h number Total inner content height
+--- @return number max_scroll Maximum scroll offset limit
+function m.scroll_begin(state, x, y, w, h, content_h)
+    local max_scroll = math.max(0, content_h - h)
+
+    if wheel_delta ~= 0 and m.in_rect(x, y, w, h) then
+        state.y = state.y - wheel_delta * SCROLL_SPEED
+    end
+
+    if state.y > max_scroll then
+        state.y = max_scroll
+    end
+
+    if state.y < 0 then
+        state.y = 0
+    end
+
+    scroll_depth = scroll_depth + 1
+
+    local entry = scroll_stack[scroll_depth]
+    if not entry then
+        entry = {}
+        scroll_stack[scroll_depth] = entry
+    end
+
+    entry.state = state
+    entry.x, entry.y = x, y
+    entry.w, entry.h = w, h
+    entry.content = content_h
+    entry.max = max_scroll
+
+    _draw.push_clip(x, y, w, h)
+    return max_scroll
+end
+
+--- Ends active scrollable region and renders scrollbar thumb indicator
+function m.scroll_end()
+    local entry = scroll_stack[scroll_depth]
+    if not entry then return end
+
+    scroll_depth = scroll_depth - 1
+
+    if entry.max > 0 then
+        local theme = _theme.get()
+        local bar_w = 6
+        local bar_x = entry.x + entry.w - bar_w - 2
+        local track_h = entry.h - 4
+        local thumb_h = math.max(24, track_h * entry.h / entry.content)
+        local thumb_y = entry.y + 2 + (track_h - thumb_h) * (entry.state.y / entry.max)
+
+        _draw.set_colour(theme.scrollbar_track)
+        _draw.rect(bar_x, entry.y + 2, bar_w, track_h)
+
+        _draw.set_colour(theme.scrollbar_thumb)
+        _draw.rect(bar_x, thumb_y, bar_w, thumb_h)
+    end
+
+    _draw.pop_clip()
 end
 
 return m

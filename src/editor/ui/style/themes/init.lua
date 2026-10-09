@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _theme = require("src.engine.ui.style.theme")
+local _theme = require("src.engine.ui.modules.theme")
 
 --- @section Registration
 

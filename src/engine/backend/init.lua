@@ -25,4 +25,5 @@ return {
     process = require("src.engine.backend.platform." .. PLATFORM .. ".process"),
     filesystem = require("src.engine.backend.platform." .. PLATFORM .. ".filesystem"),
     http = require("src.engine.backend.platform." .. PLATFORM .. ".http"),
+    network = require("src.engine.backend.platform." .. PLATFORM .. ".network"),
 }
