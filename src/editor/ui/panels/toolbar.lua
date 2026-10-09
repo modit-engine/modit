@@ -15,6 +15,8 @@ local _components = require("src.engine.ui.components")
 local _session = require("src.editor.core.session")
 local _new_project = require("src.editor.ui.panels.new_project")
 local _settings = require("src.editor.core.settings")
+local _menu = require("src.editor.ui.components.menu")
+local _editor_settings = require("src.editor.ui.panels.editor_settings")
 local _themes = require("src.editor.ui.style.themes")
 
 --- @section Constants
@@ -27,6 +29,7 @@ local FILE_MENU_ITEMS_CLOSED = { "New Project", "Exit" }
 local VIEW_MENU_ITEMS = {
     { label = "Toggle Panels", keep_open = true, items = { "Files", "Props", "Console", "Minimap" } },
     { label = "Theme", items = _themes.labels },
+    "Editor Settings",
 }
 
 local PANEL_KEYS = { "left", "right", "bottom" }
@@ -66,7 +69,7 @@ end
 --- @return number|nil sub Selected sub-level item index
 local function render_menu_dropdown(menu_id, label, items, toolbar_bounds)
     local menu_w = _font.width(16, label) + 20
-    local choice, sub = _components.dropdown(menu_id, label, cursor_x, toolbar_bounds.y, menu_w, toolbar_bounds.h, items)
+    local choice, sub = _menu.dropdown(menu_id, label, cursor_x, toolbar_bounds.y, menu_w, toolbar_bounds.h, items)
     cursor_x = cursor_x + menu_w
     return choice, sub
 end
@@ -109,6 +112,8 @@ function m.draw(toolbar_bounds, active_theme)
         end
     elseif view_choice == 2 and sub_choice then
         _theme.set(_themes.keys[sub_choice])
+    elseif view_choice == 3 then
+        _editor_settings.open()
     end
 
     cursor_x = cursor_x + 12
