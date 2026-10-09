@@ -21,6 +21,10 @@ local _cursor = require("src.editor.ui.panels.code.modules.cursor")
 local _files = require("src.editor.ui.panels.code.modules.files")
 local _keys = require("src.editor.ui.panels.code.modules.keys")
 local _pointer = require("src.editor.ui.panels.code.modules.pointer")
+local _minimap = require("src.editor.ui.panels.code.modules.minimap")
+local _image = require("src.editor.ui.panels.image")
+local _find = require("src.editor.ui.panels.code.modules.find")
+local _settings = require("src.editor.core.settings")
 
 --- @section Constants
 
@@ -236,6 +240,11 @@ local function draw_editor(target_buffer, panel_x, panel_y, panel_w, panel_h, th
     local first_line = math.max(1, math.floor(scroll_y / _state.line_h) + 1)
     local last_line = math.min(#target_buffer.lines, math.floor((scroll_y + panel_h) / _state.line_h) + 1)
 
+    if target_buffer.jump_until and os.clock() < target_buffer.jump_until then
+        _draw.set_colour(theme.bg_hover)
+        _draw.rect(panel_x, panel_y + (target_buffer.jump_line - 1) * _state.line_h - scroll_y, panel_w, _state.line_h)
+    end
+
     -- Line number gutter
     for line_idx = first_line, last_line do
         local line_str = tostring(line_idx)
@@ -248,6 +257,8 @@ local function draw_editor(target_buffer, panel_x, panel_y, panel_w, panel_h, th
 
     local offset_x = text_left_margin - target_buffer.sx
     local sel_start_y, sel_start_x, sel_end_y, sel_end_x = _buffer.selection(target_buffer)
+
+    _find.highlight(target_buffer, offset_x, panel_y - scroll_y, first_line, last_line, cell_w, _state.line_h, theme)
 
     -- Active selection rendering
     if sel_start_y then
@@ -353,6 +364,14 @@ function m.open(file_path)
         return false
     end
 
+    if _image.supports(file_path) then
+        local tab = { path = file_path, name = file_path:match("([^/]+)$") or file_path, image = true }
+        _state.buffers[#_state.buffers + 1] = tab
+        _state.active, _state.selecting = tab, false
+        _input.blur()
+        return true
+    end
+
     local handle = io.open(file_path, "rb")
     if not handle then
         _state.notify("Could not open file")
@@ -383,6 +402,18 @@ function m.open(file_path)
     return true
 end
 
+--- Opens a source location without replacing an existing unsaved buffer.
+function m.open_at(file_path, line)
+    if not m.open(file_path) then return false end
+    local buffer = _state.active
+    if buffer.image then return false end
+    line = math.max(1, math.min(#buffer.lines, math.floor(line)))
+    _cursor.move_to(buffer, line, 0, false)
+    _state.selecting = false
+    buffer.jump_line, buffer.jump_until = line, os.clock() + 2
+    return true
+end
+
 --- Checks if any files are currently open in the editor
 --- @return boolean open True if at least one buffer tab is open
 function m.has_open()
@@ -400,6 +431,10 @@ end
 
 --- Closes all open editor buffer tabs and drops keyboard focus
 function m.close_all()
+    _find.visible = false
+    for _, tab in ipairs(_state.buffers) do
+        if tab.asset then _image.release(tab.asset) end
+    end
     _state.buffers, _state.active, _state.selecting = {}, nil, false
     if _input.has_focus(_state.focus_token) then 
         _input.set_focus(nil) 
@@ -427,7 +462,21 @@ function m.draw(viewport)
     local active_buffer = _state.active
     if not active_buffer then return end
 
-    draw_editor(active_buffer, viewport.x, viewport.y + TAB_H, viewport.w, viewport.h - TAB_H - STATUS_H, theme)
+    if active_buffer.image then
+        _minimap.cancel_drag()
+        _image.draw(active_buffer, {x=viewport.x, y=viewport.y+TAB_H, w=viewport.w, h=viewport.h-TAB_H}, theme)
+        return
+    end
+
+    local find_h = _find.draw(active_buffer, viewport.x, viewport.y + TAB_H, viewport.w, theme)
+    local map_w = _settings.minimap and viewport.w >= 440 and 160 or 0
+    local editor_h = viewport.h - TAB_H - STATUS_H - find_h
+    draw_editor(active_buffer, viewport.x, viewport.y + TAB_H + find_h, viewport.w - map_w, editor_h, theme)
+    if map_w > 0 and editor_h > 0 then
+        _minimap.draw(active_buffer, viewport.x + viewport.w - map_w, viewport.y + TAB_H + find_h, map_w, editor_h, theme)
+    else
+        _minimap.cancel_drag()
+    end
     draw_status(active_buffer, viewport, theme)
 end
 

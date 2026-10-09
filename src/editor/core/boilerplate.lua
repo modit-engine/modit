@@ -11,7 +11,7 @@ local m = {}
 local CONFIG = [[
 return {
     window = {
-        title = "{{name}}", -- Window title bar text
+        title = {{label_literal}}, -- Window title bar text
         -- icon = "path/to/icon.png", -- Window and taskbar icon path
         size = {
             width = 1280, -- Default width in pixels
@@ -170,7 +170,7 @@ end
 --- @param vars table Key to value map
 --- @return string
 function m.render(text, vars)
-    return (text:gsub("{{(%w+)}}", function(key) return vars[key] end))
+    return (text:gsub("{{([%w_]+)}}", function(key) return vars[key] end))
 end
 
 return m

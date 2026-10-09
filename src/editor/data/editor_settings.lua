@@ -1,6 +1,9 @@
 return {
     theme = "default",
+    minimap = true,
     recent = {
+        "C:/Users/josh sayer/Documents/_MODIT_PROJECTS/my_new_project",
+        "projects/tempproject",
         "projects/test_project",
         "projects/teststarter",
         "projects/testempty",

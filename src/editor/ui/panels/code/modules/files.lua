@@ -17,6 +17,7 @@ local m = {}
 --- @param target_buffer table Buffer instance to save
 --- @return boolean ok True if save succeeded
 function m.save(target_buffer)
+    if target_buffer.image then return true end
     if _buffer.save(target_buffer) then 
         return true 
     end
@@ -27,6 +28,7 @@ end
 --- Closes target buffer tab and shifts active selection to adjacent buffer if needed
 --- @param target_buffer table Buffer instance to close
 function m.close_buffer(target_buffer)
+    if target_buffer.asset then require("src.editor.ui.panels.image").release(target_buffer.asset) end
     for index, current_buffer in ipairs(_state.buffers) do
         if current_buffer == target_buffer then
             table.remove(_state.buffers, index)

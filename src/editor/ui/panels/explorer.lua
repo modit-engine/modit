@@ -13,6 +13,7 @@ local _fs = _backend.filesystem
 --- Editor
 local _components = require("src.engine.ui.components")
 local _input = require("src.engine.ui.modules.input")
+local _image = require("src.editor.ui.panels.image")
 local _theme = require("src.engine.ui.modules.theme")
 
 --- @section Constants
@@ -252,6 +253,7 @@ end
 --- Opens file explorer targeting specified root directory path
 --- @param dir_path string Directory path to load as tree root
 function m.open(dir_path)
+    _image.clear_thumbnails()
     root_path = dir_path
     expanded_paths = {}
     selected_path, is_selected_dir = nil, false
@@ -262,6 +264,7 @@ end
 
 --- Closes explorer and clears active directory state
 function m.close()
+    _image.clear_thumbnails()
     root_path = nil
     selected_path, is_selected_dir = nil, false
     edit_state = nil
@@ -361,8 +364,13 @@ function m.draw(viewport)
                     pending_action = "cancel" 
                 end
             else
+                local name_x = text_x + 16
+                if not tree_row.dir and _image.supports(tree_row.path) then
+                    _image.thumbnail(tree_row.path, name_x, row_y + 3, 18, active_theme)
+                    name_x = name_x + 24
+                end
                 _draw.set_colour(active_theme.text_primary)
-                _input.text(tree_row.name, text_x + 16, text_y, 16)
+                _input.text(tree_row.name, name_x, text_y, 16)
 
                 if is_hovered and is_pressed then
                     selected_path, is_selected_dir = tree_row.path, tree_row.dir

@@ -15,13 +15,14 @@ local DEFAULT_THEME = "default"
 
 --- @section Initialisation
 
-local m = { theme = DEFAULT_THEME, recent = {}, sizes = {} }
+local m = { theme = DEFAULT_THEME, recent = {}, sizes = {}, minimap = true }
 
 --- @section Functions
 
 --- Reads editor settings from disk and populates theme, recent projects, and layout sizes in a sandboxed environment
 function m.load()
     m.theme = DEFAULT_THEME
+    m.minimap = true
     m.recent, m.sizes = {}, {}
 
     local text = _fs.read_file(PATH)
@@ -37,6 +38,7 @@ function m.load()
     if type(data.theme) == "string" then
         m.theme = data.theme
     end
+    if type(data.minimap) == "boolean" then m.minimap = data.minimap end
 
     if type(data.recent) == "table" then
         for _, p in ipairs(data.recent) do
@@ -74,6 +76,7 @@ function m.save()
     local out = { 
         "return {\n",
         ("    theme = %q,\n"):format(m.theme or DEFAULT_THEME),
+        ("    minimap = %s,\n"):format(tostring(m.minimap)),
         "    recent = {\n"
     }
 

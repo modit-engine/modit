@@ -74,6 +74,8 @@ end
 function m.close()
     _session.stop()
     _ui.panels.code.save_all()
+    _ui.panels.code.close_all()
+    _ui.panels.explorer.close()
     _settings.set_theme(_theme.name())
     for panel_key, size_value in pairs(_ui.style.layout.sizes) do
         _settings.sizes[panel_key] = size_value
