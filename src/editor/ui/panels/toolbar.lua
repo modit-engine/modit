@@ -15,6 +15,7 @@ local _components = require("src.engine.ui.components")
 local _session = require("src.editor.core.session")
 local _new_project = require("src.editor.ui.panels.new_project")
 local _settings = require("src.editor.core.settings")
+local _themes = require("src.editor.ui.style.themes")
 
 --- @section Constants
 
@@ -25,10 +26,9 @@ local FILE_MENU_ITEMS_CLOSED = { "New Project", "Exit" }
 
 local VIEW_MENU_ITEMS = {
     { label = "Toggle Panels", keep_open = true, items = { "Files", "Props", "Console", "Minimap" } },
-    { label = "Theme", items = { "Default", "Tokyo Night" } },
+    { label = "Theme", items = _themes.labels },
 }
 
-local THEME_KEYS = { "default", "tokyo_night" }
 local PANEL_KEYS = { "left", "right", "bottom" }
 
 --- @section Initialisation
@@ -108,7 +108,7 @@ function m.draw(toolbar_bounds, active_theme)
             m.show[panel_key] = not m.show[panel_key]
         end
     elseif view_choice == 2 and sub_choice then
-        _theme.set(THEME_KEYS[sub_choice])
+        _theme.set(_themes.keys[sub_choice])
     end
 
     cursor_x = cursor_x + 12
