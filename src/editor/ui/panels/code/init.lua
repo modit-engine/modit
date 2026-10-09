@@ -22,6 +22,7 @@ local _files = require("src.editor.ui.panels.code.modules.files")
 local _keys = require("src.editor.ui.panels.code.modules.keys")
 local _pointer = require("src.editor.ui.panels.code.modules.pointer")
 local _minimap = require("src.editor.ui.panels.code.modules.minimap")
+local _find = require("src.editor.ui.panels.code.modules.find")
 local _settings = require("src.editor.core.settings")
 
 --- @section Constants
@@ -256,6 +257,8 @@ local function draw_editor(target_buffer, panel_x, panel_y, panel_w, panel_h, th
     local offset_x = text_left_margin - target_buffer.sx
     local sel_start_y, sel_start_x, sel_end_y, sel_end_x = _buffer.selection(target_buffer)
 
+    _find.highlight(target_buffer, offset_x, panel_y - scroll_y, first_line, last_line, cell_w, _state.line_h, theme)
+
     -- Active selection rendering
     if sel_start_y then
         local sel_color = syntax_theme.selection or { 70, 120, 200, 90 }
@@ -418,6 +421,7 @@ end
 
 --- Closes all open editor buffer tabs and drops keyboard focus
 function m.close_all()
+    _find.visible = false
     _state.buffers, _state.active, _state.selecting = {}, nil, false
     if _input.has_focus(_state.focus_token) then 
         _input.set_focus(nil) 
@@ -445,11 +449,12 @@ function m.draw(viewport)
     local active_buffer = _state.active
     if not active_buffer then return end
 
+    local find_h = _find.draw(active_buffer, viewport.x, viewport.y + TAB_H, viewport.w, theme)
     local map_w = _settings.minimap and viewport.w >= 440 and 160 or 0
-    local editor_h = viewport.h - TAB_H - STATUS_H
-    draw_editor(active_buffer, viewport.x, viewport.y + TAB_H, viewport.w - map_w, editor_h, theme)
+    local editor_h = viewport.h - TAB_H - STATUS_H - find_h
+    draw_editor(active_buffer, viewport.x, viewport.y + TAB_H + find_h, viewport.w - map_w, editor_h, theme)
     if map_w > 0 and editor_h > 0 then
-        _minimap.draw(active_buffer, viewport.x + viewport.w - map_w, viewport.y + TAB_H, map_w, editor_h, theme)
+        _minimap.draw(active_buffer, viewport.x + viewport.w - map_w, viewport.y + TAB_H + find_h, map_w, editor_h, theme)
     else
         _minimap.cancel_drag()
     end
