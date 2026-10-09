@@ -22,6 +22,7 @@ local _files = require("src.editor.ui.panels.code.modules.files")
 local _keys = require("src.editor.ui.panels.code.modules.keys")
 local _pointer = require("src.editor.ui.panels.code.modules.pointer")
 local _minimap = require("src.editor.ui.panels.code.modules.minimap")
+local _image = require("src.editor.ui.panels.image")
 local _find = require("src.editor.ui.panels.code.modules.find")
 local _settings = require("src.editor.core.settings")
 
@@ -363,6 +364,14 @@ function m.open(file_path)
         return false
     end
 
+    if _image.supports(file_path) then
+        local tab = { path = file_path, name = file_path:match("([^/]+)$") or file_path, image = true }
+        _state.buffers[#_state.buffers + 1] = tab
+        _state.active, _state.selecting = tab, false
+        _input.blur()
+        return true
+    end
+
     local handle = io.open(file_path, "rb")
     if not handle then
         _state.notify("Could not open file")
@@ -397,6 +406,7 @@ end
 function m.open_at(file_path, line)
     if not m.open(file_path) then return false end
     local buffer = _state.active
+    if buffer.image then return false end
     line = math.max(1, math.min(#buffer.lines, math.floor(line)))
     _cursor.move_to(buffer, line, 0, false)
     _state.selecting = false
@@ -422,6 +432,9 @@ end
 --- Closes all open editor buffer tabs and drops keyboard focus
 function m.close_all()
     _find.visible = false
+    for _, tab in ipairs(_state.buffers) do
+        if tab.asset then _image.release(tab.asset) end
+    end
     _state.buffers, _state.active, _state.selecting = {}, nil, false
     if _input.has_focus(_state.focus_token) then 
         _input.set_focus(nil) 
@@ -448,6 +461,12 @@ function m.draw(viewport)
 
     local active_buffer = _state.active
     if not active_buffer then return end
+
+    if active_buffer.image then
+        _minimap.cancel_drag()
+        _image.draw(active_buffer, {x=viewport.x, y=viewport.y+TAB_H, w=viewport.w, h=viewport.h-TAB_H}, theme)
+        return
+    end
 
     local find_h = _find.draw(active_buffer, viewport.x, viewport.y + TAB_H, viewport.w, theme)
     local map_w = _settings.minimap and viewport.w >= 440 and 160 or 0
