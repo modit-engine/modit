@@ -1,20 +1,16 @@
 return {
-    theme = "tinysprite",
+    theme = "default",
     minimap = false,
     show_file_previews = false,
     recent = {
-        "C:/Users/josh sayer/Documents/_MODIT_PROJECTS/my_new_project",
-        "projects/tempproject",
+        "C:/Users/Jord/Desktop/_modit_tests/otherproject",
+        "C:/Users/Jord/Desktop/_modit_tests/some_project",
+        "C:/Users/Jord/Desktop/_modit_tests/demo_project",
         "projects/test_project",
-        "projects/teststarter",
-        "projects/testempty",
-        "projects/somenew",
-        "projects/anothertest",
-        "projects/sample_project",
     },
     sizes = {
-        right = 290,
-        bottom = 227,
         left = 302,
+        right = 278,
+        bottom = 227,
     },
 }

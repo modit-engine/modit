@@ -21,7 +21,16 @@ local KNOWN_KEYS = {
 
 --- @section Initialisation
 
-local m = { root = "projects/test_project/mods" }
+local m = {
+    root = nil,
+    config = {},
+}
+
+function m.init(config, game_dir)
+    m.config = config or {}
+    local project_dir = game_dir:gsub("[/\\]$", ""):match("^(.*)[/\\][^/\\]+$")
+    m.root = project_dir .. "/mods"
+end
 
 local mods = {} -- name -> { name, manifest, state, realm, env, cache, loading, stop_handlers }
 local snapshots = {} -- path -> source as last loaded
@@ -143,11 +152,14 @@ local function make_env(mod)
         name = mod.name,
         realm = mod.realm,
         persist = mod.persist,
+        dir = m.root .. "/" .. mod.name,   -- add this
         on_stop = function(callback) mod.stop_handlers[#mod.stop_handlers + 1] = callback end,
     }
     env.mod = handle
 
-    for key, value in pairs(_sandbox.build(handle)) do env[key] = value end
+    for key, value in pairs(_sandbox.build(handle, m.config.modules or {})) do
+        env[key] = value
+    end
     return env
 end
 

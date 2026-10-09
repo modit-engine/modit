@@ -2,14 +2,25 @@
 --- @file src/engine/backend/raylib/init.lua
 --- @description Raylib backend entry point aggregating window management, 2D rendering primitives, offscreen canvases, and input handlers.
 
+--- @section Constants
+
+local RENDER_PATH = "src.engine.backend.raylib.render"
+local INPUT_PATH = "src.engine.backend.raylib.input"
+local AUDIO_PATH = "src.engine.backend.raylib.audio"
+
 --- @section Modules
 
 return {
-    window = require("src.engine.backend.raylib.render.window"),
-    draw = require("src.engine.backend.raylib.render.draw"),
-    canvas = require("src.engine.backend.raylib.render.canvas"),
-    mouse = require("src.engine.backend.raylib.input.mouse"),
-    keyboard = require("src.engine.backend.raylib.input.keyboard"),
-    camera = require("src.engine.backend.raylib.render.camera"),
-    draw3d = require("src.engine.backend.raylib.render.draw3d"),
+    window = require(RENDER_PATH .. ".window"),
+    draw = require(RENDER_PATH .. ".draw"),
+    canvas = require(RENDER_PATH .. ".canvas"),
+    camera = require(RENDER_PATH .. ".camera"),
+    draw3d = require(RENDER_PATH .. ".draw3d"),
+    image = require(RENDER_PATH .. ".image"),
+    font = require(RENDER_PATH .. ".font"),
+
+    mouse = require(INPUT_PATH .. ".mouse"),
+    keyboard = require(INPUT_PATH .. ".keyboard"),
+
+    audio = require(AUDIO_PATH .. ".audio"),
 }

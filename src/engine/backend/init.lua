@@ -21,6 +21,9 @@ return {
     keyboard = _raylib.keyboard,
     camera = _raylib.camera,
     draw3d = _raylib.draw3d,
+    audio = _raylib.audio,
+    font = _raylib.font,
+    image = _raylib.image,
 
     process = require("src.engine.backend.platform." .. PLATFORM .. ".process"),
     filesystem = require("src.engine.backend.platform." .. PLATFORM .. ".filesystem"),

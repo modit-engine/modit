@@ -13,6 +13,7 @@ return {
     window = require("src.engine.core.window"),
 
     --- Modules
+    audio = require("src.engine.modules.audio"),
     camera = require("src.engine.modules.camera"),
     commands = require("src.engine.modules.commands"),
     draw = require("src.engine.modules.draw"),
@@ -21,6 +22,7 @@ return {
     font = require("src.engine.modules.font"),
     hooks = require("src.engine.modules.hooks"),
     http = require("src.engine.modules.http"),
+    image = require("src.engine.modules.image"),
     keyboard = require("src.engine.modules.keyboard"),
     maths = require("src.engine.modules.maths"),
     mouse = require("src.engine.modules.mouse"),

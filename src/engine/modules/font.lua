@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _backend = require("src.engine.backend").draw 
+local _backend = require("src.engine.backend").font
 local _draw = require("src.engine.modules.draw") 
 
 --- @section Initialisation
@@ -30,7 +30,7 @@ function m.load(path, size, codepoints)
     end
     file:close() 
 
-    local handle = _backend.font_load(path, size, codepoints) 
+    local handle = _backend.load(path, size, codepoints)
     if not handle then
         return nil, "Could not load font: " .. path 
     end
@@ -38,7 +38,7 @@ function m.load(path, size, codepoints)
     return {
         handle = handle, 
         size = size, 
-        cell_w = _backend.font_measure(handle, "MMMMMMMMMM", size) / 10, 
+        cell_w = _backend.measure(handle, "MMMMMMMMMM", size) / 10, 
     }
 end
 
@@ -86,7 +86,7 @@ end
 --- @param x number Screen X position 
 --- @param y number Screen Y position 
 function m.draw(f, text, x, y)
-    _backend.font_text(f.handle, text, x, y, f.size) 
+    _backend.text(f.handle, text, x, y, f.size) 
 end
 
 --- Measures dimensions of text string for specified font handle 
@@ -95,7 +95,7 @@ end
 --- @return number width Width of text string in pixels 
 --- @return number height Height of text string in pixels 
 function m.measure(f, text)
-    return _backend.font_measure(f.handle, text, f.size) 
+    return _backend.measure(f.handle, text, f.size) 
 end
 
 --- Measures text width at given size using cached font or default draw module fallback 

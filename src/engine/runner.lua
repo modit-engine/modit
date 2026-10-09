@@ -33,7 +33,12 @@ end
 
 local GAME_DIR = project .. "/game"
 
-package.path = GAME_DIR .. "/?.lua;" .. GAME_DIR .. "/?/init.lua;" .. package.path
+
+package.path = project .. "/?.lua;" ..
+    project .. "/?/init.lua;" ..
+    GAME_DIR .. "/?.lua;" ..
+    GAME_DIR .. "/?/init.lua;" ..
+    package.path
 
 --- @section Imports
 
@@ -289,6 +294,7 @@ _G[GLOBAL_NAME] = engine
 engine.log.sink = emit
 
 engine.window.init(conf)
+engine.mods.init(conf, GAME_DIR)
 
 -- Client startup is independent of the server.
 -- Launch the dedicated server separately with --server.
