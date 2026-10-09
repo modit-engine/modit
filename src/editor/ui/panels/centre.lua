@@ -162,7 +162,7 @@ local function draw_project_overview(viewport, theme)
     local center_y = viewport.y + viewport.h / 2
     local active_project = _session.project
 
-    render_centered_text(center_x, active_project.name, center_y - 40, 32, theme.text_primary)
+    render_centered_text(center_x, active_project.label or active_project.name, center_y - 40, 32, theme.text_primary)
     render_centered_text(center_x, _session.status_text(), center_y + 6, 16, _session.status_colour(theme))
     render_centered_text(center_x, active_project.path, center_y + 30, 16, theme.text_tertiary)
     render_centered_text(center_x, "F5 to run / reload", center_y + 54, 16, theme.text_tertiary)

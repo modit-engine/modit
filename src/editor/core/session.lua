@@ -163,6 +163,7 @@ function m.open(path)
     m.project = {
         path = path,
         name = path:match("([^/]+)$") or path,
+        label = _projects.label(path),
         log = path .. "/game.log",
         server_log = path .. "/server.log",
     }
@@ -171,7 +172,7 @@ function m.open(path)
     _settings.add_recent(path)
     _settings.save()
 
-    _console.open(m.project.log)
+    _console.open(m.project.log, m.project.server_log)
     _explorer.open(path)
     _input.blur()
     return true
@@ -195,10 +196,10 @@ end
 --- @param name string Target project folder name
 --- @param template_id string|nil Template id
 --- @return string|nil err Error message if creation fails
-function m.create(name, template_id)
-    local path, err = _projects.create(name, template_id)
+function m.create(name, template_id, parent, label)
+    local path, err = _projects.create(name, template_id, parent, label)
     if not path then return err end
-    m.open(path)
+    if not m.open(path) then return "Project created, but could not be opened" end
 end
 
 --- Launches or restarts current project in an isolated runner _process
@@ -211,7 +212,7 @@ function m.run()
 
     local lf = io.open(project.log, "w")
     if lf then lf:close() end
-    _console.clear()
+    _console.clear("client")
 
     local cmd = ('"%s" src/engine/runner.lua "%s" "%s"'):format(LUAJIT, project.path, project.log)
     local handle, err = _process.start(cmd)
@@ -238,6 +239,10 @@ function m.run_server()
     m.stop_server()
     _code.save_all()
     take_snapshot(project.path)
+
+    local lf = io.open(project.server_log, "w")
+    if lf then lf:close() end
+    _console.clear("server")
 
     local cmd = ('"%s" src/engine/runner.lua "%s" "%s" --server'):format(LUAJIT, project.path, project.server_log)
     local handle, err = _process.start(cmd)

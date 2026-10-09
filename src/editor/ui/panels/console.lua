@@ -8,7 +8,7 @@
 local _font = require("src.engine.modules.font")
 
 --- Editor
-local _input = require("src.engine.ui.modules.input")
+local _draw = require("src.engine.modules.draw")
 local _theme = require("src.engine.ui.modules.theme")
 local _components = require("src.engine.ui.components")
 
@@ -36,19 +36,17 @@ local TINT_TEXT = { warn = true, error = true, fatal = true }
 
 --- @section Initialisation
 
-local log_levels = {}
-local log_times = {}
-local log_texts = {}
-local log_count = 0
+local function new_stream()
+    return {
+        log_levels = {}, log_times = {}, log_texts = {}, log_count = 0,
+        read_pos = 0, partial_line = "", last_level = "print",
+        scroll_state = { y = 0 }, is_stick_bottom = true,
+    }
+end
 
-local log_path = nil
-local read_pos = 0
-local partial_line = ""
-local last_level = "print"
+local streams = { client = new_stream(), server = new_stream() }
+local active_tab = "client"
 local poll_timer = 0
-
-local scroll_state = { y = 0 }
-local is_stick_bottom = true
 
 local time_column_w = nil
 local tag_column_w = nil
@@ -59,16 +57,16 @@ local m = {}
 
 --- Resets log buffer arrays and optionally skips existing file contents
 --- @param skip_existing boolean If true, sets read position to end of log file
-local function reset_log_state(skip_existing)
-    log_levels, log_times, log_texts, log_count = {}, {}, {}, 0
-    read_pos, partial_line, last_level = 0, "", "print"
-    scroll_state.y = 0
-    is_stick_bottom = true
+local function reset_log_state(stream, skip_existing)
+    stream.log_levels, stream.log_times, stream.log_texts, stream.log_count = {}, {}, {}, 0
+    stream.read_pos, stream.partial_line, stream.last_level = 0, "", "print"
+    stream.scroll_state.y = 0
+    stream.is_stick_bottom = true
 
-    if skip_existing and log_path then
-        local file_handle = io.open(log_path, "rb")
+    if skip_existing and stream.log_path then
+        local file_handle = io.open(stream.log_path, "rb")
         if file_handle then
-            read_pos = file_handle:seek("end")
+            stream.read_pos = file_handle:seek("end")
             file_handle:close()
         end
     end
@@ -78,32 +76,32 @@ end
 --- @param level_tag string Log severity level tag key
 --- @param timestamp string Timestamp string
 --- @param text_content string Message text content
-local function add_log_entry(level_tag, timestamp, text_content)
-    log_count = log_count + 1
-    log_levels[log_count] = level_tag
-    log_times[log_count] = timestamp
-    log_texts[log_count] = (text_content:gsub("\t", "    "))
+local function add_log_entry(stream, level_tag, timestamp, text_content)
+    stream.log_count = stream.log_count + 1
+    stream.log_levels[stream.log_count] = level_tag
+    stream.log_times[stream.log_count] = timestamp
+    stream.log_texts[stream.log_count] = (text_content:gsub("\t", "    "))
 
-    if log_count > MAX_LINES then
-        table.remove(log_levels, 1)
-        table.remove(log_times, 1)
-        table.remove(log_texts, 1)
-        log_count = log_count - 1
+    if stream.log_count > MAX_LINES then
+        table.remove(stream.log_levels, 1)
+        table.remove(stream.log_times, 1)
+        table.remove(stream.log_texts, 1)
+        stream.log_count = stream.log_count - 1
     end
 end
 
 --- Ingests incoming chunk buffer data into line entries
 --- @param chunk_data string Raw string chunk read from log file
-local function ingest_data(chunk_data)
-    chunk_data = partial_line .. chunk_data
+local function ingest_data(stream, chunk_data)
+    chunk_data = stream.partial_line .. chunk_data
 
     local last_newline = chunk_data:match("^.*()\n")
     if not last_newline then
-        partial_line = chunk_data
+        stream.partial_line = chunk_data
         return
     end
 
-    partial_line = chunk_data:sub(last_newline + 1)
+    stream.partial_line = chunk_data:sub(last_newline + 1)
     local line_block = chunk_data:sub(1, last_newline - 1)
 
     for current_line in (line_block .. "\n"):gmatch("(.-)\n") do
@@ -112,36 +110,36 @@ local function ingest_data(chunk_data)
         local level_tag, timestamp, text_content = current_line:match("^(%a+)\t(%d%d:%d%d:%d%d)\t(.*)$")
 
         if level_tag and TAGS[level_tag] then
-            last_level = level_tag
+            stream.last_level = level_tag
         else
-            level_tag, timestamp, text_content = last_level, "", current_line
+            level_tag, timestamp, text_content = stream.last_level, "", current_line
         end
 
-        add_log_entry(level_tag, timestamp, text_content)
+        add_log_entry(stream, level_tag, timestamp, text_content)
     end
 end
 
 --- Polls target log file for new append data
-local function poll_log_file()
-    if not log_path then return end
+local function poll_log_file(stream)
+    if not stream.log_path then return end
 
-    local file_handle = io.open(log_path, "rb")
+    local file_handle = io.open(stream.log_path, "rb")
     if not file_handle then return end
 
     local current_size = file_handle:seek("end")
 
-    if current_size < read_pos then
-        reset_log_state(false)
+    if current_size < stream.read_pos then
+        reset_log_state(stream, false)
     end
 
-    if current_size > read_pos then
-        file_handle:seek("set", read_pos)
+    if current_size > stream.read_pos then
+        file_handle:seek("set", stream.read_pos)
 
-        local new_data = file_handle:read(current_size - read_pos)
-        read_pos = current_size
+        local new_data = file_handle:read(current_size - stream.read_pos)
+        stream.read_pos = current_size
 
         if new_data then
-            ingest_data(new_data)
+            ingest_data(stream, new_data)
         end
     end
 
@@ -150,26 +148,30 @@ end
 
 --- @section Functions
 
---- Sets target log file path and reads existing contents into console
---- @param target_log_path string File path to log file
-function m.open(target_log_path)
-    log_path = target_log_path
-    reset_log_state(false)
+--- Opens both project logs, keeping their histories and scroll positions separate.
+function m.open(client_path, server_path)
+    streams.client.log_path = client_path
+    streams.server.log_path = server_path
+    active_tab = "client"
+    poll_timer = 0
+    for _, stream in pairs(streams) do
+        reset_log_state(stream, false)
+    end
 end
 
---- Clears current console output and aligns read position to end of file
-function m.clear()
-    reset_log_state(true)
+--- Clears only the selected tab (or named stream), without changing the log file.
+function m.clear(realm)
+    reset_log_state(streams[realm or active_tab], true)
 end
 
---- Updates console file polling timer tick
---- @param delta_time number Frame delta time in seconds
+--- Poll both logs even when their tab or the console panel is hidden.
 function m.update(delta_time)
     poll_timer = poll_timer + delta_time
-
     if poll_timer >= POLL_EVERY then
         poll_timer = 0
-        poll_log_file()
+        for _, stream in pairs(streams) do
+            poll_log_file(stream)
+        end
     end
 end
 
@@ -183,8 +185,24 @@ function m.draw(viewport)
     local active_theme = _theme.get()
     local log_colors = active_theme.console_logs
 
-    _components.label(log_count .. " lines", viewport.x + 100, viewport.y + 8, FONT_SIZE, active_theme.text_tertiary)
+    for index, realm in ipairs({ "client", "server" }) do
+        local tab_x = viewport.x + 80 + (index - 1) * 72
+        local selected = active_tab == realm
+        local title = realm == "client" and "Client" or "Server"
+        if _components.button(title, tab_x, viewport.y + 3, 70, 26, FONT_SIZE,
+            selected and active_theme.accent or active_theme.text_primary) then
+            active_tab = realm
+        end
+        if active_tab == realm then
+            _draw.set_colour(active_theme.accent)
+            _draw.rect(tab_x, viewport.y + TITLE_H - 2, 70, 2)
+        end
+    end
 
+    local stream = streams[active_tab]
+    if viewport.w >= 390 then
+        _components.label(stream.log_count .. " lines", viewport.x + 238, viewport.y + 8, FONT_SIZE, active_theme.text_tertiary)
+    end
     if _components.button("Clear", viewport.x + viewport.w - 70, viewport.y + 3, 60, 24) then
         m.clear()
     end
@@ -194,7 +212,7 @@ function m.draw(viewport)
     local panel_w = viewport.w
     local panel_h = viewport.h - TITLE_H - 1
 
-    if log_count == 0 then
+    if stream.log_count == 0 then
         _components.label("No output", panel_x + PAD, panel_y + PAD, FONT_SIZE, active_theme.text_tertiary)
         return
     end
@@ -204,31 +222,31 @@ function m.draw(viewport)
         tag_column_w = _font.width(FONT_SIZE, "SUCCESS")
     end
 
-    local total_content_h = log_count * LINE_H + PAD * 2
+    local total_content_h = stream.log_count * LINE_H + PAD * 2
     local max_scroll_y = math.max(0, total_content_h - panel_h)
 
-    if is_stick_bottom then
-        scroll_state.y = max_scroll_y
+    if stream.is_stick_bottom then
+        stream.scroll_state.y = max_scroll_y
     end
 
-    _components.scroll_begin(scroll_state, panel_x, panel_y, panel_w, panel_h, total_content_h)
-    is_stick_bottom = (scroll_state.y >= max_scroll_y - 1)
+    _components.scroll_begin(stream.scroll_state, panel_x, panel_y, panel_w, panel_h, total_content_h)
+    stream.is_stick_bottom = (stream.scroll_state.y >= max_scroll_y - 1)
 
-    local first_idx = math.max(1, math.floor((scroll_state.y - PAD) / LINE_H) + 1)
-    local last_idx = math.min(log_count, math.ceil((scroll_state.y + panel_h - PAD) / LINE_H) + 1)
+    local first_idx = math.max(1, math.floor((stream.scroll_state.y - PAD) / LINE_H) + 1)
+    local last_idx = math.min(stream.log_count, math.ceil((stream.scroll_state.y + panel_h - PAD) / LINE_H) + 1)
 
     local time_col_x = panel_x + PAD
     local tag_col_x = time_col_x + time_column_w + GAP
     local text_col_x = tag_col_x + tag_column_w + GAP
 
     for index = first_idx, last_idx do
-        local level_tag = log_levels[index]
+        local level_tag = stream.log_levels[index]
         local tag_color = log_colors[level_tag] or active_theme.text_primary
-        local line_y = panel_y + PAD + (index - 1) * LINE_H - scroll_state.y
+        local line_y = panel_y + PAD + (index - 1) * LINE_H - stream.scroll_state.y
 
-        _components.label(log_times[index], time_col_x, line_y, FONT_SIZE, active_theme.text_tertiary)
+        _components.label(stream.log_times[index], time_col_x, line_y, FONT_SIZE, active_theme.text_tertiary)
         _components.label(TAGS[level_tag] or "", tag_col_x, line_y, FONT_SIZE, tag_color)
-        _components.label(log_texts[index], text_col_x, line_y, FONT_SIZE, TINT_TEXT[level_tag] and tag_color or active_theme.text_primary)
+        _components.label(stream.log_texts[index], text_col_x, line_y, FONT_SIZE, TINT_TEXT[level_tag] and tag_color or active_theme.text_primary)
     end
 
     _components.scroll_end()
