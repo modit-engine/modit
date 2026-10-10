@@ -1,7 +1,7 @@
 --- Read-only image tabs and small, bounded explorer thumbnail cache.
 local ffi = require("ffi")
 local ray = require("src.engine.backend.raylib.ffi").lib
-local draw = require("src.engine.modules.draw")
+local draw = require("src.engine.modules.render.draw")
 local ui = require("src.engine.ui.components")
 local m = {}
 local extensions = {png=true, jpg=true, jpeg=true, bmp=true, tga=true, gif=true, qoi=true}

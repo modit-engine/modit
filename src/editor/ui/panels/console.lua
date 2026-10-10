@@ -5,13 +5,13 @@
 --- @section Imports
 
 --- Engine
-local _font = require("src.engine.modules.font")
+local _font = require("src.engine.modules.render.font")
 
 --- Editor
 local _input = require("src.engine.ui.modules.input")
 local _location = require("src.editor.core.log_location")
 local _code = require("src.editor.ui.panels.code")
-local _draw = require("src.engine.modules.draw")
+local _draw = require("src.engine.modules.render.draw")
 local _theme = require("src.engine.ui.modules.theme")
 local _components = require("src.engine.ui.components")
 

@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _font = require("src.engine.modules.font")
+local _font = require("src.engine.modules.render.font")
 
 --- @section Constants
 

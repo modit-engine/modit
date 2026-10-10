@@ -5,7 +5,7 @@
 --- @section Imports
 
 --- Engine
-local _draw = require("src.engine.modules.draw")
+local _draw = require("src.engine.modules.render.draw")
 
 --- Editor
 local _input = require("src.engine.ui.modules.input")

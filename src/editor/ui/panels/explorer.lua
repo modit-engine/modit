@@ -5,7 +5,7 @@
 --- @section Imports
 
 --- Engine
-local _draw = require("src.engine.modules.draw")
+local _draw = require("src.engine.modules.render.draw")
 local _keyboard = require("src.engine.modules.input.keyboard")
 local _backend = require("src.engine.backend")
 local _fs = _backend.filesystem

@@ -1,6 +1,6 @@
 --- Categorised editor preferences, sharing the editor modal layer.
 local ui = require("src.engine.ui.components")
-local draw = require("src.engine.modules.draw")
+local draw = require("src.engine.modules.render.draw")
 local theme = require("src.engine.ui.modules.theme")
 local settings = require("src.editor.core.settings")
 local themes = require("src.editor.ui.style.themes")

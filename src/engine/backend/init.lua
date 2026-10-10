@@ -21,6 +21,8 @@ return {
     keyboard = _raylib.keyboard,
     camera = _raylib.camera,
     draw3d = _raylib.draw3d,
+    lighting = _raylib.lighting,
+    sky = _raylib.sky,
     audio = _raylib.audio,
     font = _raylib.font,
     image = _raylib.image,

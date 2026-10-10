@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.modules.draw")
+local _draw = require("src.engine.modules.render.draw")
 local _input = require("src.engine.ui.modules.input")
 local _components = require("src.engine.ui.components")
 local _session = require("src.editor.core.session")

@@ -3,7 +3,7 @@
 
 --- @section Imports
 
-local draw = require("src.engine.modules.draw")
+local draw = require("src.engine.modules.render.draw")
 local input = require("src.engine.ui.modules.input")
 local highlight = require("src.editor.ui.panels.code.modules.highlight")
 local state = require("src.editor.ui.panels.code.modules.state")
