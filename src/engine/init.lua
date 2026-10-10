@@ -6,6 +6,7 @@
 
 local _input = require("src.engine.modules.input")
 local _runtime = require("src.engine.modules.runtime")
+local _render = require("src.engine.modules.render")
 
 --- @section Module
 
@@ -21,16 +22,20 @@ return {
     audio = require("src.engine.modules.audio"),
     camera = require("src.engine.modules.camera"),
     commands = require("src.engine.modules.commands"),
-    draw = require("src.engine.modules.draw"),
-    draw3d = require("src.engine.modules.draw3d"),
     exports = require("src.engine.modules.exports"),
-    font = require("src.engine.modules.font"),
     hooks = require("src.engine.modules.hooks"),
     http = require("src.engine.modules.http"),
-    image = require("src.engine.modules.image"),
     maths = require("src.engine.modules.maths"),
     mods = require("src.engine.modules.mods"),
     network = require("src.engine.modules.network"),
+
+    --- Render 
+    draw = _render.draw,
+    draw3d = _render.draw3d,
+    font = _render.font,
+    image = _render.image,
+    lighting = _render.lighting,
+    sky = _render.sky,
 
     --- Input
     actions = _input.actions,

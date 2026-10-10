@@ -1,8 +1,9 @@
 --- @module camera
---- @file src/engine/core/camera.lua
---- @description Camera state holder for 2D and 3D rendering.
+--- @file src/engine/modules/camera.lua
+--- @description Camera state holder for 2D and 3D rendering. The 3D pass is lit and fogged by the lighting module.
 
 local _backend = require("src.engine.backend").camera
+local _lighting = require("src.engine.modules.render.lighting")
 
 local camera = {}
 camera.__index = camera
@@ -24,9 +25,13 @@ end
 function camera:begin_3d()
     local p, t, u = self.position, self.target, self.up
     _backend.begin_3d(p.x, p.y, p.z, t.x, t.y, t.z, u.x, u.y, u.z, self.fov)
+    _lighting.begin(self)
 end
 
-function camera:end_3d() _backend.end_3d() end
+function camera:end_3d()
+    _lighting.finish()
+    _backend.end_3d()
+end
 
 function camera:begin_2d()
     _backend.begin_2d(self.offset.x, self.offset.y, self.target_2d.x, self.target_2d.y, self.rotation, self.zoom)

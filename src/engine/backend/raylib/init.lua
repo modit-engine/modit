@@ -16,6 +16,8 @@ return {
     canvas = require(RENDER_PATH .. ".canvas"),
     camera = require(RENDER_PATH .. ".camera"),
     draw3d = require(RENDER_PATH .. ".draw3d"),
+    lighting = require(RENDER_PATH .. ".lighting"),
+    sky = require(RENDER_PATH .. ".sky"),
     image = require(RENDER_PATH .. ".image"),
     font = require(RENDER_PATH .. ".font"),
 

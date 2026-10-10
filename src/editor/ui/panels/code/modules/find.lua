@@ -1,7 +1,7 @@
 --- Current-file literal search and undoable replacement. No patterns or regex.
 local input = require("src.engine.ui.modules.input")
 local ui = require("src.engine.ui.components")
-local draw = require("src.engine.modules.draw")
+local draw = require("src.engine.modules.render.draw")
 local keys = require("src.engine.modules.input.keyboard")
 local state = require("src.editor.ui.panels.code.modules.state")
 local buffer = require("src.editor.ui.panels.code.modules.buffer")

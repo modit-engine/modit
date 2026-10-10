@@ -4,10 +4,10 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.modules.draw")
+local _draw = require("src.engine.modules.render.draw")
 local _mouse = require("src.engine.modules.input.mouse")
 local _keyboard = require("src.engine.modules.input.keyboard")
-local _font = require("src.engine.modules.font")
+local _font = require("src.engine.modules.render.font")
 local _theme = require("src.engine.ui.modules.theme")
 
 --- @section Constants

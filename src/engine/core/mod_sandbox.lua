@@ -1,4 +1,3 @@
-
 --- @module mod_sandbox
 --- @file src/engine/core/mod_sandbox.lua
 --- @description Builds the restricted public API exposed to sandboxed mods.
@@ -41,6 +40,8 @@ local AUDIO = {
     "set_music_volume", "set_music_pitch", "is_music_playing",
 }
 local IMAGE = { "get_size", "draw", "draw_frame", "draw_sprite" }
+local LIGHTING = { "set_sun", "set_ambient", "set_fog" }
+local SKY = { "set", "draw" }
 
 --- @section Initialisation
 
@@ -91,13 +92,15 @@ end
 
 local function load_client_modules()
     return {
-        draw = require("src.engine.modules.draw"),
-        draw3d = require("src.engine.modules.draw3d"),
+        draw = require("src.engine.modules.render.draw"),
+        draw3d = require("src.engine.modules.render.draw3d"),
         camera = require("src.engine.modules.camera"),
         keyboard = require("src.engine.modules.input.keyboard"),
         mouse = require("src.engine.modules.input.mouse"),
         window = require("src.engine.core.window"),
         audio = require("src.engine.modules.audio"),
+        lighting = require("src.engine.modules.render.lighting"),
+        sky = require("src.engine.modules.render.sky"),
     }
 end
 
@@ -186,6 +189,8 @@ local function build_client(mod, modules)
     local _mouse = client.mouse
     local _window = client.window
     local _audio = client.audio
+    local _lighting = client.lighting
+    local _sky = client.sky
 
     local api = build_shared(mod, RESERVED.client, modules)
 
@@ -253,6 +258,22 @@ local function build_client(mod, modules)
         end
 
         api.audio = audio
+    end
+
+    if modules.lighting then
+        api.lighting = pick(_lighting, LIGHTING)
+
+        mod.on_stop(function()
+            _lighting.reset()
+        end)
+    end
+
+    if modules.sky then
+        api.sky = pick(_sky, SKY)
+
+        mod.on_stop(function()
+            _sky.reset()
+        end)
     end
 
     if modules.image then

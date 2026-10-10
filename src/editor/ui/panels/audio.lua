@@ -1,6 +1,6 @@
 --- Read-only streamed audio previews. The editor owns its preview audio device.
 local raylib = require("src.engine.backend.raylib.ffi").lib
-local draw = require("src.engine.modules.draw")
+local draw = require("src.engine.modules.render.draw")
 local components = require("src.engine.ui.components")
 local input = require("src.engine.ui.modules.input")
 

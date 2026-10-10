@@ -1,3 +1,11 @@
+# v0.7.0
+
+Lighting & Sky.
+
+- Moved render modules inside engine into `/modules/render`
+- Added basic `modules/render/lighting` & `/sky` modules nothing amazing mostly a copy of raylib examples
+- Client build fixes pushed by sayer
+
 # v0.6.0
 
 Maths modules, editor improvements, and client/server support.

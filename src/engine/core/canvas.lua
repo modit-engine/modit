@@ -5,7 +5,7 @@
 --- @section Imports
 
 local _backend = require("src.engine.backend").canvas
-local _draw = require("src.engine.modules.draw")
+local _draw = require("src.engine.modules.render.draw")
 
 --- @section Initialization
 

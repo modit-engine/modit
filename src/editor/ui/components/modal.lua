@@ -2,7 +2,7 @@
 local base = require("src.engine.ui.components.modal")
 local ui = require("src.engine.ui.components")
 local input = require("src.engine.ui.modules.input")
-local draw = require("src.engine.modules.draw")
+local draw = require("src.engine.modules.render.draw")
 local theme = require("src.engine.ui.modules.theme")
 local keyboard = require("src.engine.modules.input.keyboard")
 local current

@@ -5,7 +5,7 @@
 --- @section Imports
 
 --- Engine
-local _font = require("src.engine.modules.font")
+local _font = require("src.engine.modules.render.font")
 
 --- Editor
 local _config = require("src.editor.ui.panels.code.modules.config")

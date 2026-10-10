@@ -5,8 +5,8 @@
 --- @section Imports
 
 --- Engine
-local _draw = require("src.engine.modules.draw")
-local _font = require("src.engine.modules.font")
+local _draw = require("src.engine.modules.render.draw")
+local _font = require("src.engine.modules.render.font")
 
 --- Editor
 local _theme = require("src.engine.ui.modules.theme")
