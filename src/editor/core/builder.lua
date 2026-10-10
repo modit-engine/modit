@@ -92,8 +92,7 @@ function m.build(target, project)
 
     project = project:gsub("[/\\]+$", "")
 
-    local temp = os.getenv("TEMP") or "."
-    log_path = temp .. "\\modit_build.log"
+    log_path = project .. "/build.log"
     os.remove(log_path)
 
     local parts = {
