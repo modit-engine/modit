@@ -100,6 +100,25 @@ function m.word_right(buffer)
     return line_index, column_index
 end
 
+--- Finds the selection bounds of the character under the pointer.
+--- Columns are zero-based; the returned end column is exclusive.
+function m.word_range(line_text, column_index)
+    if #line_text == 0 then return 0, 0 end
+    column_index = math.max(0, math.min(column_index, #line_text - 1))
+    local character = line_text:sub(column_index + 1, column_index + 1)
+    local pattern = character:match("[%w_]") and "[%w_]" or character:match("%s") and "%s"
+    local first_column, last_column = column_index, column_index + 1
+    if pattern then
+        while first_column > 0 and line_text:sub(first_column, first_column):match(pattern) do
+            first_column = first_column - 1
+        end
+        while last_column < #line_text and line_text:sub(last_column + 1, last_column + 1):match(pattern) do
+            last_column = last_column + 1
+        end
+    end
+    return first_column, last_column
+end
+
 --- Selects all text content within the buffer and positions cursor at the end
 --- @param buffer table Target text buffer instance
 function m.select_all(buffer)
