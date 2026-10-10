@@ -60,16 +60,16 @@ function m.shell(window_w, window_h, show_left, show_right, show_bottom)
     local left_w, right_w, bottom_h = 0, 0, 0
 
     if show_right then 
-        right_w = _maths.clamp(sizes.right, MIN_SIDE, window_w - MIN_CENTRE_W - MIN_SIDE) 
+        right_w = _maths.core.clamp(sizes.right, MIN_SIDE, window_w - MIN_CENTRE_W - MIN_SIDE) 
     end
     if show_left then 
-        left_w = _maths.clamp(sizes.left, MIN_SIDE, window_w - right_w - MIN_CENTRE_W) 
+        left_w = _maths.core.clamp(sizes.left, MIN_SIDE, window_w - right_w - MIN_CENTRE_W) 
     end
     if show_right then 
-        right_w = _maths.clamp(sizes.right, MIN_SIDE, window_w - left_w - MIN_CENTRE_W) 
+        right_w = _maths.core.clamp(sizes.right, MIN_SIDE, window_w - left_w - MIN_CENTRE_W) 
     end
     if show_bottom then 
-        bottom_h = _maths.clamp(sizes.bottom, MIN_BOTTOM, body_h - MIN_CENTRE_H) 
+        bottom_h = _maths.core.clamp(sizes.bottom, MIN_BOTTOM, body_h - MIN_CENTRE_H) 
     end
 
     if show_left then sizes.left = left_w end

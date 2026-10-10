@@ -118,8 +118,8 @@ end
 --- @return number line_index Clamped line index (1-based)
 --- @return number column_index Clamped column index (0-based)
 function m.hit_test(buffer, pixel_x, pixel_y, left_margin, top_margin)
-    local line_index = _maths.clamp(math.floor((pixel_y - top_margin + buffer.scroll.y) / _state.line_h) + 1, 1, #buffer.lines)
-    local column_index = _maths.clamp(math.floor((pixel_x - left_margin + buffer.sx) / _state.font.cell_w + 0.5), 0, #buffer.lines[line_index])
+    local line_index = _maths.core.clamp(math.floor((pixel_y - top_margin + buffer.scroll.y) / _state.line_h) + 1, 1, #buffer.lines)
+    local column_index = _maths.core.clamp(math.floor((pixel_x - left_margin + buffer.sx) / _state.font.cell_w + 0.5), 0, #buffer.lines[line_index])
     return line_index, column_index
 end
 

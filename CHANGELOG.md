@@ -1,3 +1,47 @@
+# v0.6.0
+
+Maths modules, editor improvements, and client/server support.
+
+- Added an editor **Load Project** menu option.
+- Moved keyboard and mouse input into the new `modules/input/` directory.
+- Added an input actions module for defining and handling higher-level input actions.
+- Replaced the old maths file with a new `modules/maths/` directory containing:
+  - Vector operations (`vec2`, `vec3`, `vec4`).
+  - 4×4 matrix operations.
+  - 2D and 3D geometry utilities.
+  - Easing functions.
+  - Probability utilities.
+  - Statistics and core maths helpers.
+- Added a maths `init.lua` entry point to expose maths modules through a single import.
+- Added a new `modules/runtime/` directory containing callbacks, cooldowns, RNG utilities, state management, and timers.
+- Reviewed and corrected mathematical edge cases, input validation, degenerate geometry, and matrix operations.
+- Kept maths modules independent of Raylib for use in game logic and headless server code.
+- Added support for building both client and server executables using the build tool's target option.
+- Verified the client and server can run together, connect successfully, and support in-game movement.
+
+**Notes:**
+
+- The maths API remains subject to review as the engine develops.
+- Matrix conventions and rendering integration should continue to be verified against Modit's Raylib backend and camera implementation.
+- Additional modules and API documentation will be reviewed as development continues.
+
+# v0.5.0
+
+More modules + Editor improvments
+
+* Added support for audio and images back in from old build.
+* Editor has had a lot of improvements courtesy of Sayer
+* Game/Mod pathing handling fixed not correctly handles all files relative to current directory
+* Project are now created and loaded externally with an included `project.modit` file on creation
+* Game engine api is now gated behind `modules = {}` section in game configs, this still has more work to go
+* Test projects removed from repo, will put up a seperate repo to pull download from on template picker.
+* Raylib font functions moved out of `draw` into its own `font` module.
+* Mod sandbox updated to cover the new modules, still has more work to go. 
+
+Notes:
+
+* API is still not fully finalised, have a few more modules to move over, then will give everything a once over and build a api cheatsheet prior to public switch over.
+
 # v0.4.0
 
 Add in test game and port modules into engine.

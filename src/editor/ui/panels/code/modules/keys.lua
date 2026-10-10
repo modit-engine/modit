@@ -5,7 +5,7 @@
 --- @section Imports
 
 --- Engine
-local _keyboard = require("src.engine.modules.keyboard")
+local _keyboard = require("src.engine.modules.input.keyboard")
 
 --- Editor
 local _input = require("src.engine.ui.modules.input")

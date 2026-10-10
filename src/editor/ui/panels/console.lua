@@ -41,13 +41,19 @@ local TINT_TEXT = { warn = true, error = true, fatal = true }
 
 local function new_stream()
     return {
+        log_path = nil,
         log_levels = {}, log_times = {}, log_texts = {}, log_count = 0, locations = {},
         read_pos = 0, partial_line = "", last_level = "print",
         scroll_state = { y = 0 }, is_stick_bottom = true,
     }
 end
 
-local streams = { client = new_stream(), server = new_stream() }
+local streams = {
+    client = new_stream(),
+    server = new_stream(),
+    build = new_stream(),
+}
+
 local active_tab = "client"
 local poll_timer = 0
 local project_path
@@ -72,7 +78,7 @@ local function reset_log_state(stream, skip_existing)
     if skip_existing and stream.log_path then
         local file_handle = io.open(stream.log_path, "rb")
         if file_handle then
-            stream.read_pos = file_handle:seek("end")
+            stream.read_pos = file_handle:seek("end") or 0
             file_handle:close()
         end
     end
@@ -116,7 +122,8 @@ local function ingest_data(stream, chunk_data)
     for current_line in (line_block .. "\n"):gmatch("(.-)\n") do
         current_line = current_line:gsub("\r$", "")
 
-        local level_tag, timestamp, text_content = current_line:match("^(%a+)\t(%d%d:%d%d:%d%d)\t(.*)$")
+        local level_tag, timestamp, text_content =
+            current_line:match("^(%a+)\t(%d%d:%d%d:%d%d)\t(.*)$")
 
         if level_tag and TAGS[level_tag] then
             stream.last_level = level_tag
@@ -135,7 +142,7 @@ local function poll_log_file(stream)
     local file_handle = io.open(stream.log_path, "rb")
     if not file_handle then return end
 
-    local current_size = file_handle:seek("end")
+    local current_size = file_handle:seek("end") or 0
 
     if current_size < stream.read_pos then
         reset_log_state(stream, false)
@@ -157,14 +164,22 @@ end
 
 --- @section Functions
 
---- Opens both project logs, keeping their histories and scroll positions separate.
-function m.open(client_path, server_path, project)
+--- Opens project logs, keeping their histories and scroll positions separate.
+--- @param client_path string Client log path
+--- @param server_path string Server log path
+--- @param project string Project path
+--- @param build_path string Build log path
+function m.open(client_path, server_path, project, build_path)
     project_path = project
     notice = nil
+
     streams.client.log_path = client_path
     streams.server.log_path = server_path
+    streams.build.log_path = build_path or (project and (project .. "/build.log"))
+
     active_tab = "client"
     poll_timer = 0
+
     for _, stream in pairs(streams) do
         reset_log_state(stream, false)
     end
@@ -172,14 +187,20 @@ end
 
 --- Clears only the selected tab (or named stream), without changing the log file.
 function m.clear(realm)
-    reset_log_state(streams[realm or active_tab], true)
+    local stream = streams[realm or active_tab]
+    if not stream then return false end
+
+    reset_log_state(stream, true)
+    return true
 end
 
---- Poll both logs even when their tab or the console panel is hidden.
+--- Poll all logs even when their tab or the console panel is hidden.
 function m.update(delta_time)
     poll_timer = poll_timer + delta_time
+
     if poll_timer >= POLL_EVERY then
         poll_timer = 0
+
         for _, stream in pairs(streams) do
             poll_log_file(stream)
         end
@@ -196,24 +217,34 @@ function m.draw(viewport)
     local active_theme = _theme.get()
     local log_colors = active_theme.console_logs
 
-    for index, realm in ipairs({ "client", "server" }) do
+    local tabs = {
+        { id = "client", title = "Client" },
+        { id = "server", title = "Server" },
+        { id = "build", title = "Build" },
+    }
+
+    for index, tab in ipairs(tabs) do
         local tab_x = viewport.x + 80 + (index - 1) * 72
-        local selected = active_tab == realm
-        local title = realm == "client" and "Client" or "Server"
-        if _components.button(title, tab_x, viewport.y + 3, 70, 26, FONT_SIZE,
+        local selected = active_tab == tab.id
+
+        if _components.button(tab.title, tab_x, viewport.y + 3, 70, 26, FONT_SIZE,
             selected and active_theme.accent or active_theme.text_primary) then
-            active_tab = realm
+            active_tab = tab.id
         end
-        if active_tab == realm then
+
+        if selected then
             _draw.set_colour(active_theme.accent)
             _draw.rect(tab_x, viewport.y + TITLE_H - 2, 70, 2)
         end
     end
 
     local stream = streams[active_tab]
-    if viewport.w >= 390 then
-        _components.label(stream.log_count .. " lines", viewport.x + 238, viewport.y + 8, FONT_SIZE, active_theme.text_tertiary)
+
+    if viewport.w >= 430 then
+        _components.label(stream.log_count .. " lines", viewport.x + 302, viewport.y + 8,
+            FONT_SIZE, active_theme.text_tertiary)
     end
+
     if _components.button("Clear", viewport.x + viewport.w - 70, viewport.y + 3, 60, 24) then
         m.clear()
     end
@@ -262,19 +293,28 @@ function m.draw(viewport)
         local line_y = panel_y + PAD + (index - 1) * LINE_H - stream.scroll_state.y
 
         local location = stream.locations[index]
+
         if location then
-            local width = math.max(0, math.min(_font.width(FONT_SIZE, stream.log_texts[index]), panel_x + panel_w - 14 - text_col_x))
+            local width = math.max(0, math.min(
+                _font.width(FONT_SIZE, stream.log_texts[index]),
+                panel_x + panel_w - 14 - text_col_x
+            ))
+
             local over, clicked = _input.interact(text_col_x, line_y, width, LINE_H)
+
             if over then
                 _draw.set_colour(active_theme.accent)
                 _draw.line(text_col_x, line_y + FONT_SIZE, text_col_x + width, line_y + FONT_SIZE)
             end
+
             if clicked then
                 local path, resolve_error = _location.resolve(location, project_path)
+
                 if path and _code.open_at(path, location.line) then
                     notice = nil
                 else
-                    notice = path and (_code.get_notice() or "Could not open file") or resolve_error or ("File not found: " .. location.path)
+                    notice = path and (_code.get_notice() or "Could not open file")
+                        or resolve_error or ("File not found: " .. location.path)
                     notice_until = os.clock() + 5
                 end
             end
@@ -282,10 +322,27 @@ function m.draw(viewport)
 
         _components.label(stream.log_times[index], time_col_x, line_y, FONT_SIZE, active_theme.text_tertiary)
         _components.label(TAGS[level_tag] or "", tag_col_x, line_y, FONT_SIZE, tag_color)
-        _components.label(stream.log_texts[index], text_col_x, line_y, FONT_SIZE, TINT_TEXT[level_tag] and tag_color or active_theme.text_primary)
+        _components.label(stream.log_texts[index], text_col_x, line_y, FONT_SIZE,
+            TINT_TEXT[level_tag] and tag_color or active_theme.text_primary)
     end
 
     _components.scroll_end()
+end
+
+function m.status_text()
+    if state == "building" then
+        return "Building..."
+    end
+
+    if state == "success" then
+        return message or "Build succeeded"
+    end
+
+    if state == "failed" then
+        return message or "Build failed"
+    end
+
+    return "Ready"
 end
 
 return m

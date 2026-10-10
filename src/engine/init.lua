@@ -2,13 +2,18 @@
 --- @file src/engine/init.lua
 --- @description Engine core module aggregator and initialization facade.
 
--- @section Module
+--- @section Imports
+
+local _input = require("src.engine.modules.input")
+local _runtime = require("src.engine.modules.runtime")
+
+--- @section Module
 
 return {
 
     --- Core
     canvas = require("src.engine.core.canvas"),
-    json = require("src.engine.core.canvas"),
+    json = require("src.engine.core.json"),
     log = require("src.engine.core.log"),
     window = require("src.engine.core.window"),
 
@@ -23,11 +28,17 @@ return {
     hooks = require("src.engine.modules.hooks"),
     http = require("src.engine.modules.http"),
     image = require("src.engine.modules.image"),
-    keyboard = require("src.engine.modules.keyboard"),
     maths = require("src.engine.modules.maths"),
-    mouse = require("src.engine.modules.mouse"),
-    network = require("src.engine.modules.network"),
     mods = require("src.engine.modules.mods"),
+    network = require("src.engine.modules.network"),
+
+    --- Input
+    actions = _input.actions,
+    keyboard = _input.keyboard,
+    mouse = _input.mouse,
+
+    --- Runtime
+    runtime = _runtime,
 
     --- UI
     ui = require("src.engine.ui"),

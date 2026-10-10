@@ -7,7 +7,7 @@
 --- Engine
 local _draw = require("src.engine.modules.draw")
 local _font = require("src.engine.modules.font")
-local _mouse = require("src.engine.modules.mouse")
+local _mouse = require("src.engine.modules.input.mouse")
 
 --- Editor
 local _components = require("src.engine.ui.components")

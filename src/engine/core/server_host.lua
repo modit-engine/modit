@@ -10,7 +10,7 @@ local _log = require("src.engine.core.log")
 --- @section Constants
 
 local DEFAULT_TICK_RATE = 30
-local MAX_FRAME = 0.25 -- Longest frame time fed to the accumulator, stops a stall causing a burst of ticks
+local MAX_FRAME = 0.25 
 
 --- @section Initialisation
 
@@ -29,7 +29,6 @@ else
     sleep_ms = function(ms) _ffi.C.usleep(ms * 1000) end
 end
 
--- Wall clock in seconds. os.clock is CPU time on some platforms and drifts while the loop sleeps.
 local now
 
 if _ffi.os == "Windows" then
@@ -59,9 +58,23 @@ end
 now = now or os.clock
 
 local function file_exists(path)
-    local handle = io.open(path, "rb")
-    if not handle then return false end
-    handle:close()
+    local bundle = rawget(_G, "MODIT_BUNDLE")
+
+    if bundle then
+        local key = path:gsub("\\", "/")
+        key = key:gsub("^%./", "")
+
+        if bundle.has(key) then
+            return true
+        end
+    end
+
+    local file = io.open(path, "rb")
+    if not file then
+        return false
+    end
+
+    file:close()
     return true
 end
 
@@ -126,7 +139,6 @@ function m:load()
         return false
     end
 
-    -- A stub that returns nothing is valid, there is just nothing to run yet
     self.game = type(result) == "table" and result or {}
 
     local init = self.game.load or self.game.init

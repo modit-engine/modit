@@ -6,7 +6,7 @@
 
 --- Engine
 local _draw = require("src.engine.modules.draw")
-local _keyboard = require("src.engine.modules.keyboard")
+local _keyboard = require("src.engine.modules.input.keyboard")
 local _backend = require("src.engine.backend")
 local _fs = _backend.filesystem
 

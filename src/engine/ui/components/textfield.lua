@@ -9,7 +9,7 @@ local _draw = require("src.engine.modules.draw")
 
 --- Editor
 local _input = require("src.engine.ui.modules.input")
-local keyboard = require("src.engine.modules.keyboard")
+local keyboard = require("src.engine.modules.input.keyboard")
 local _theme = require("src.engine.ui.modules.theme")
 
 --- @section Component

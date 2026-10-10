@@ -5,7 +5,7 @@
 --- @section Imports
 
 --- Engine
-local _keyboard = require("src.engine.modules.keyboard")
+local _keyboard = require("src.engine.modules.input.keyboard")
 local _process = require("src.engine.backend").process
 local _fs = require("src.engine.backend.platform." .. require("ffi").os:lower() .. ".filesystem")
 
@@ -16,6 +16,7 @@ local _explorer = require("src.editor.ui.panels.explorer")
 local _code = require("src.editor.ui.panels.code")
 local _settings = require("src.editor.core.settings")
 local _projects = require("src.editor.core.projects")
+local _builder = require("src.editor.core.builder")
 
 --- @section Constants
 
@@ -144,14 +145,20 @@ function m.has_server()
     return m.project ~= nil and server_enabled(m.project.path)
 end
 
---- Loads a project directory into the active editor workspace session
+--- Loads a project directory into the active editor workspace session.
 --- @param path string Disk path to target project directory
 --- @return boolean ok True on successful load
 function m.open(path)
+    if type(path) ~= "string" or not path:find("%S") then
+        print("Could not load project: invalid path")
+        return false
+    end
+
     path = path:gsub("\\", "/"):gsub("^%./", ""):gsub("/+$", "")
 
-    if not _projects.is_project(path) then
-        print("Not a project (no main.lua): " .. path)
+    local valid, err = _projects.is_project(path)
+    if not valid then
+        print("Could not load project: " .. (err or path))
         return false
     end
 
@@ -166,13 +173,14 @@ function m.open(path)
         label = _projects.label(path),
         log = path .. "/game.log",
         server_log = path .. "/server.log",
+        build_log = path .. "/build.log",
     }
     m.version = m.version + 1
 
     _settings.add_recent(path)
     _settings.save()
 
-    _console.open(m.project.log, m.project.server_log, m.project.path)
+    _console.open(m.project.log, m.project.server_log, m.project.path, m.project.build_log)
     _explorer.open(path)
     _input.blur()
     return true
@@ -289,6 +297,7 @@ function m.update(dt)
 
     _console.update(dt)
     _explorer.update(dt)
+    _builder.update(dt)
 
     if _keyboard.pressed("f5") then m.run() end
     if _keyboard.pressed("f6") then m.run_server() end

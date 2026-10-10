@@ -8,6 +8,10 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local GLOBAL_NAME = "engine"
 
+-- Set by the launcher stub of a built game. Nil when running from source
+local BUNDLE = rawget(_G, "MODIT_BUNDLE")
+local BUNDLED = BUNDLE ~= nil
+
 local project
 local log_path
 local headless = false
@@ -19,11 +23,17 @@ for i = 1, #arg do
     elseif value:sub(1, 2) == "--" then
         print("unknown flag: " .. value)
         os.exit(1)
+    elseif BUNDLED then
+        -- built games always run their own project, so extra arguments are ignored
     elseif not project then
         project = value
     elseif not log_path then
         log_path = value
     end
+end
+
+if BUNDLED then
+    project = "."
 end
 
 if not project then
@@ -82,7 +92,7 @@ end
 
 local conf = {
     window = {
-        title = project:match("([^/\\]+)[/\\]*$") or "Game",
+        title = (BUNDLED and rawget(_G, "MODIT_NAME")) or project:match("([^/\\]+)[/\\]*$") or "Game",
         size = { width = 640, height = 360 },
         flags = {},
     },
@@ -102,14 +112,26 @@ local function merge(base, over)
     end
 end
 
-local CONFIG_PATH = GAME_DIR .. "/config.lua"
-local conf_handle = io.open(CONFIG_PATH, "rb")
+--- Checks for a file on disk, or embedded in a built game
+local function file_exists(path)
+    if BUNDLED then
+        local key = path:gsub("\\", "/"):gsub("^%./", "")
+        if BUNDLE.has(key) then return true end
+    end
 
-if not conf_handle then
+    local handle = io.open(path, "rb")
+    if handle then
+        handle:close()
+        return true
+    end
+    return false
+end
+
+local CONFIG_PATH = GAME_DIR .. "/config.lua"
+
+if not file_exists(CONFIG_PATH) then
     _log.warn("game/config.lua not found, using defaults")
 else
-    conf_handle:close()
-
     local conf_chunk, conf_err = loadfile(CONFIG_PATH)
     if not conf_chunk then
         _log.error("game/config.lua failed to load, using defaults:\n" .. tostring(conf_err))
@@ -149,10 +171,14 @@ local HEADLESS_MODULES = {
     exports = "src.engine.modules.exports",
     commands = "src.engine.modules.commands",
     network = "src.engine.modules.network",
+    runtime = "src.engine.modules.runtime",
+    filesystem = "src.engine.modules.filesystem",
     mods = "src.engine.modules.mods",
+    server_console = "src.engine.modules.server_console",
 }
 
 local CLIENT_ONLY = {
+    actions = true,
     draw = true,
     draw3d = true,
     camera = true,
@@ -163,29 +189,54 @@ local CLIENT_ONLY = {
     ui = true,
 }
 
---- Builds the engine table for a dedicated server without loading Raylib
+
 local function build_headless_engine()
     local engine = {}
 
+    -- Publish the namespace before loading modules that may access it.
+    engine.config = conf
+    engine.game_dir = GAME_DIR
+    _G[GLOBAL_NAME] = engine
+
+    -- Load the base services first. Do not load builtin_commands here:
+    -- it requires engine.commands and engine.mods to already exist.
     for name, path in pairs(HEADLESS_MODULES) do
         local ok, mod = pcall(require, path)
 
-        if ok then
-            engine[name] = mod
-        else
-            local reason = tostring(mod):match("[^\n]+") or "unknown error"
-            _log.warn(("%s.%s is not available in a dedicated server: %s")
-                :format(GLOBAL_NAME, name, reason))
+        if not ok then
+            local reason = tostring(mod)
+            _log.error(("%s.%s failed to load from %s:\n%s"):format(
+                GLOBAL_NAME, name, path, reason
+            ))
+            error(("Failed to load required headless module '%s':\n%s"):format(
+                path, reason
+            ), 0)
         end
+
+        engine[name] = mod
     end
+
+    -- Load only after all its dependencies have been registered.
+    local ok, builtin_commands = pcall(
+        require, "src.engine.core.builtin_commands"
+    )
+
+    if not ok then
+        local reason = tostring(builtin_commands)
+        _log.error(("engine.builtin_commands failed to load:\n%s"):format(reason))
+        error(("Failed to load required headless module 'src.engine.core.builtin_commands':\n%s"):format(reason), 0)
+    end
+
+    engine.builtin_commands = builtin_commands
 
     return setmetatable(engine, {
         __index = function(_, key)
             if CLIENT_ONLY[key] then
-                error(("%s.%s is client only and not available in a dedicated server")
-                    :format(GLOBAL_NAME, key), 2)
+                error(("%s.%s is client only and not available in a dedicated server"):format(
+                    GLOBAL_NAME, key
+                ), 2)
             end
-        end,
+        end
     })
 end
 
@@ -202,7 +253,13 @@ local function run_headless()
     end
 
     local engine = build_headless_engine()
+    engine.config = conf
+    engine.game_dir = GAME_DIR
     _G[GLOBAL_NAME] = engine
+
+    if engine.filesystem then
+        engine.filesystem.init(GAME_DIR)
+    end
 
     local srv = new_server()
     engine.server = {
@@ -296,6 +353,10 @@ engine.log.sink = emit
 engine.window.init(conf)
 engine.mods.init(conf, GAME_DIR)
 
+if engine.filesystem then
+    engine.filesystem.init(GAME_DIR)
+end
+
 -- Client startup is independent of the server.
 -- Launch the dedicated server separately with --server.
 
@@ -329,9 +390,14 @@ end
 
 local frame_dt = 0
 
---- Executes a single game logic update step
+--- Executes a single update step: engine runtime first, then game logic
 local function tick()
-    game.update(frame_dt)
+    engine.runtime.update(frame_dt)
+    engine.actions.update(frame_dt)
+
+    if game.update then
+        game.update(frame_dt)
+    end
 end
 
 --- Executes a single game render pass
@@ -342,7 +408,7 @@ end
 while not engine.window.should_close() do
     frame_dt = engine.window.get_dt()
 
-    if game and not crash_lines and game.update then
+    if game and not crash_lines then
         local ok, err = xpcall(tick, debug.traceback)
 
         if not ok then

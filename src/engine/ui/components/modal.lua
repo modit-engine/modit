@@ -6,7 +6,7 @@
 
 --- Engine
 local _draw = require("src.engine.modules.draw")
-local keyboard = require("src.engine.modules.keyboard")
+local keyboard = require("src.engine.modules.input.keyboard")
 
 --- Editor
 local _input = require("src.engine.ui.modules.input")

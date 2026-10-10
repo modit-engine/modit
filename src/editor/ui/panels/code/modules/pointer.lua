@@ -5,8 +5,8 @@
 --- @section Imports
 
 --- Engine
-local _mouse = require("src.engine.modules.mouse")
-local _keyboard = require("src.engine.modules.keyboard")
+local _mouse = require("src.engine.modules.input.mouse")
+local _keyboard = require("src.engine.modules.input.keyboard")
 local _maths = require("src.engine.modules.maths")
 
 --- Editor
@@ -65,8 +65,8 @@ function m.update(target_buffer, text_x, text_y, panel_w, panel_h, left_margin, 
 
     if _state.selecting then
         if _mouse.down() then
-            local clamped_x = _maths.clamp(mouse_x, left_margin - cell_width, text_x + panel_w + cell_width)
-            local clamped_y = _maths.clamp(mouse_y, text_y - _state.line_h, text_y + panel_h + _state.line_h)
+            local clamped_x = _maths.core.clamp(mouse_x, left_margin - cell_width, text_x + panel_w + cell_width)
+            local clamped_y = _maths.core.clamp(mouse_y, text_y - _state.line_h, text_y + panel_h + _state.line_h)
             local line_idx, col_idx = _cursor.hit_test(target_buffer, clamped_x, clamped_y, left_margin, text_y)
             if line_idx ~= target_buffer.cy or col_idx ~= target_buffer.cx then
                 target_buffer.cy, target_buffer.cx, target_buffer.reveal = line_idx, col_idx, true

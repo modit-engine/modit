@@ -6,7 +6,7 @@
 return {
 
     window = {
-        title = "Modit Engine", -- Window title bar text
+        title = "Modit Engine - V0.6.0", -- Window title bar text
         icon = "src/assets/branding/modit_icon_32x32.png", -- Window and taskbar icon path
         size = {
             width = 1600, -- Default width in pixels

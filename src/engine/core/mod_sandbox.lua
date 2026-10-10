@@ -1,20 +1,16 @@
+
 --- @module mod_sandbox
 --- @file src/engine/core/mod_sandbox.lua
 --- @description Builds the restricted public API exposed to sandboxed mods.
 
 --- @section Imports
 
-local _draw = require("src.engine.modules.draw")
-local _draw3d = require("src.engine.modules.draw3d")
-local _camera = require("src.engine.modules.camera")
-local _keyboard = require("src.engine.modules.keyboard")
-local _mouse = require("src.engine.modules.mouse")
-local _window = require("src.engine.core.window")
-local _audio = require("src.engine.modules.audio")
 local _hooks = require("src.engine.modules.hooks")
 local _log = require("src.engine.core.log")
 local _exports = require("src.engine.modules.exports")
 local _commands = require("src.engine.modules.commands")
+local _maths = require("src.engine.modules.maths")
+local _filesystem = require("src.engine.modules.filesystem")
 
 --- @section Constants
 
@@ -44,7 +40,6 @@ local AUDIO = {
     "load_music", "unload_music", "play_music", "stop_music", "pause_music", "resume_music",
     "set_music_volume", "set_music_pitch", "is_music_playing",
 }
-
 local IMAGE = { "get_size", "draw", "draw_frame", "draw_sprite" }
 
 --- @section Initialisation
@@ -63,21 +58,56 @@ end
 local function pick(source, names)
     local result = {}
     for _, name in ipairs(names) do
-        if source[name] ~= nil then result[name] = source[name] end
+        if source[name] ~= nil then
+            result[name] = source[name]
+        end
     end
     return result
 end
 
+local function deep_copy(source, seen)
+    if type(source) ~= "table" then return source end
+
+    seen = seen or {}
+    if seen[source] then return seen[source] end
+
+    local result = {}
+    seen[source] = result
+
+    for key, value in pairs(source) do
+        result[key] = deep_copy(value, seen)
+    end
+
+    return setmetatable(result, getmetatable(source))
+end
+
 local function join(...)
     local parts = {}
-    for index = 1, select("#", ...) do parts[index] = tostring((select(index, ...))) end
+    for index = 1, select("#", ...) do
+        parts[index] = tostring((select(index, ...)))
+    end
     return table.concat(parts, "\t")
 end
 
-local function build_shared(mod, reserved)
+local function load_client_modules()
+    return {
+        draw = require("src.engine.modules.draw"),
+        draw3d = require("src.engine.modules.draw3d"),
+        camera = require("src.engine.modules.camera"),
+        keyboard = require("src.engine.modules.input.keyboard"),
+        mouse = require("src.engine.modules.input.mouse"),
+        window = require("src.engine.core.window"),
+        audio = require("src.engine.modules.audio"),
+    }
+end
+
+local function build_shared(mod, reserved, modules)
     local log = {}
+
     for _, level in ipairs(LOG_LEVELS) do
-        log[level] = function(...) _log.print(level, ("[%s] %s"):format(mod.name, join(...))) end
+        log[level] = function(...)
+            _log.print(level, ("[%s] %s"):format(mod.name, join(...)))
+        end
     end
 
     mod.on_stop(function()
@@ -86,27 +116,79 @@ local function build_shared(mod, reserved)
         _commands.remove_owner(mod.name)
     end)
 
-    return {
+    local api = {
         hooks = {
-            listen = function(name, callback) _hooks.listen(name, callback, mod.name) end,
-            unlisten = function(name, callback) _hooks.unlisten(name, callback) end,
+            listen = function(name, callback)
+                _hooks.listen(name, callback, mod.name)
+            end,
+            unlisten = function(name, callback)
+                _hooks.unlisten(name, callback)
+            end,
             fire = function(name, ...)
-                if reserved[name] then error("event '" .. tostring(name) .. "' is reserved", 2) end
+                if reserved[name] then
+                    error("event '" .. tostring(name) .. "' is reserved", 2)
+                end
                 _hooks.fire(name, ...)
             end,
         },
+
         exports = _exports.api(mod.name),
+
         commands = {
-            register = function(name, fn, help) _commands.register(name, fn, help, mod.name) end,
+            register = function(name, fn, help)
+                _commands.register(name, fn, help, mod.name)
+            end,
         },
+
         log = log,
     }
+
+    if modules.maths then
+        api.maths = deep_copy(_maths)
+    end
+
+    if modules.filesystem then
+        local prefix = mod.name .. "/"
+
+        local function scope(path)
+            if not safe_path(path) then
+                error("invalid save path: " .. tostring(path), 3)
+            end
+            return prefix .. path
+        end
+
+        api.filesystem = {
+            save = function(path, data)
+                return _filesystem.save(scope(path), data)
+            end,
+            load = function(path)
+                return _filesystem.load(scope(path))
+            end,
+            exists = function(path)
+                return _filesystem.exists(scope(path))
+            end,
+            delete = function(path)
+                return _filesystem.delete(scope(path))
+            end,
+        }
+    end
+
+    return api
 end
 
 local function build_client(mod, modules)
-    local api = build_shared(mod, RESERVED.client)
+    local client = load_client_modules()
 
-    --- Resolves a mod-relative asset path to a full path inside the mod folder
+    local _draw = client.draw
+    local _draw3d = client.draw3d
+    local _camera = client.camera
+    local _keyboard = client.keyboard
+    local _mouse = client.mouse
+    local _window = client.window
+    local _audio = client.audio
+
+    local api = build_shared(mod, RESERVED.client, modules)
+
     local function resolve(path)
         if not safe_path(path) then
             error("invalid asset path: " .. tostring(path), 3)
@@ -128,20 +210,39 @@ local function build_client(mod, modules)
     end
 
     mod.on_stop(function()
-        if mouse_locked then _mouse.unlock() end
+        if mouse_locked then
+            _mouse.unlock()
+        end
     end)
 
-    if modules.draw then api.draw = pick(_draw, DRAW) end
-    if modules.draw3d then api.draw3d = pick(_draw3d, DRAW3D) end
-    if modules.camera then api.camera = { new = _camera.new } end
-    if modules.keyboard then api.keyboard = pick(_keyboard, KEYBOARD) end
-    if modules.mouse then api.mouse = mouse end
-    if modules.window then api.window = pick(_window, WINDOW) end
+    if modules.draw then
+        api.draw = pick(_draw, DRAW)
+    end
+
+    if modules.draw3d then
+        api.draw3d = pick(_draw3d, DRAW3D)
+    end
+
+    if modules.camera then
+        api.camera = { new = _camera.new }
+    end
+
+    if modules.keyboard then
+        api.keyboard = pick(_keyboard, KEYBOARD)
+    end
+
+    if modules.mouse then
+        api.mouse = mouse
+    end
+
+    if modules.window then
+        api.window = pick(_window, WINDOW)
+    end
 
     if modules.audio then
         local audio = pick(_audio, AUDIO)
-
-        local load_sound, load_music = _audio.load_sound, _audio.load_music
+        local load_sound = _audio.load_sound
+        local load_music = _audio.load_music
 
         audio.load_sound = function(name, path)
             return load_sound(name, resolve(path))
@@ -155,19 +256,26 @@ local function build_client(mod, modules)
     end
 
     if modules.image then
-        local _image = engine.image
+        local engine = assert(rawget(_G, "engine"), "engine namespace is not initialized")
+        local _image = assert(engine.image, "engine.image is unavailable")
         local image = pick(_image, IMAGE)
-        local loaded = {} -- keys this mod loaded, freed on stop
+        local loaded = {}
 
         image.load = function(opts)
-            if type(opts) ~= "table" then error("image.load expects a table", 2) end
+            if type(opts) ~= "table" then
+                error("image.load expects a table", 2)
+            end
 
             local safe = {}
-            for key, value in pairs(opts) do safe[key] = value end
+            for key, value in pairs(opts) do
+                safe[key] = value
+            end
             safe.path = resolve(opts.path)
 
             local ok = _image.load(safe)
-            if ok then loaded[opts.key] = true end
+            if ok then
+                loaded[opts.key] = true
+            end
             return ok
         end
 
@@ -177,7 +285,9 @@ local function build_client(mod, modules)
         end
 
         mod.on_stop(function()
-            for key in pairs(loaded) do _image.unload(key) end
+            for key in pairs(loaded) do
+                _image.unload(key)
+            end
         end)
 
         api.image = image
@@ -186,13 +296,13 @@ local function build_client(mod, modules)
     return api
 end
 
-local function build_server(mod)
-    return build_shared(mod, RESERVED.server)
+local function build_server(mod, modules)
+    return build_shared(mod, RESERVED.server, modules)
 end
 
 --- @section Functions
 
---- Builds the restricted public API for one mod
+--- Builds the restricted public API for one mod.
 --- @param mod table Mod handle { name, realm, dir, on_stop }
 --- @param modules table Enabled engine modules from game config
 --- @return table api
@@ -207,7 +317,7 @@ function m.build(mod, modules)
         return build_client(mod, modules)
     end
 
-    return build_server(mod)
+    return build_server(mod, modules)
 end
 
 return m

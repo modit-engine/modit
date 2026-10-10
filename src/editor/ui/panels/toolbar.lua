@@ -13,23 +13,33 @@ local _window = require("src.engine.core.window")
 local _theme = require("src.engine.ui.modules.theme")
 local _components = require("src.engine.ui.components")
 local _session = require("src.editor.core.session")
+local _builder = require("src.editor.core.builder")
 local _new_project = require("src.editor.ui.panels.new_project")
 local _settings = require("src.editor.core.settings")
 local _menu = require("src.editor.ui.components.menu")
 local _editor_settings = require("src.editor.ui.panels.editor_settings")
 local _themes = require("src.editor.ui.style.themes")
+local _picker = require("src.editor.core.folder_picker")
+local _console = require("src.editor.ui.panels.console")
 
 --- @section Constants
 
 local BUTTON_HEIGHT = 20
 
-local FILE_MENU_ITEMS_OPEN = { "New Project", "Close Project", "Exit" }
-local FILE_MENU_ITEMS_CLOSED = { "New Project", "Exit" }
+local FILE_MENU_ITEMS_OPEN = { "New Project", "Load Project", "Close Project", "Exit" }
+local FILE_MENU_ITEMS_CLOSED = { "New Project", "Load Project", "Exit" }
 
 local VIEW_MENU_ITEMS = {
     { label = "Toggle Panels", keep_open = true, items = { "Files", "Props", "Console", "Minimap" } },
     { label = "Theme", items = _themes.labels },
     "Editor Settings",
+}
+
+local BUILD_MENU_ITEMS = {
+    {
+        label = "Windows",
+        items = { "Client", "Server" },
+    },
 }
 
 local PANEL_KEYS = { "left", "right", "bottom" }
@@ -48,10 +58,7 @@ local m = {
 
 --- @section Helpers
 
---- Renders a toolbar action button and returns click state
---- @param label string Button display text label
---- @param toolbar_bounds table Bounding rectangle for toolbar { x, y, w, h }
---- @return boolean is_clicked True if the button was clicked
+--- Renders a toolbar action button and returns click state.
 local function render_action_button(label, toolbar_bounds)
     local button_w = _font.width(16, label) + 16
     local button_y = toolbar_bounds.y + math.floor((toolbar_bounds.h - BUTTON_HEIGHT) / 2)
@@ -60,30 +67,46 @@ local function render_action_button(label, toolbar_bounds)
     return is_clicked
 end
 
---- Renders a toolbar dropdown menu and returns selected indices
---- @param menu_id string Unique dropdown identifier
---- @param label string Menu display text label
---- @param items table List of menu items or submenus
---- @param toolbar_bounds table Bounding rectangle for toolbar { x, y, w, h }
---- @return number|nil choice Selected top-level item index
---- @return number|nil sub Selected sub-level item index
+--- Renders a toolbar dropdown menu and returns selected indices.
 local function render_menu_dropdown(menu_id, label, items, toolbar_bounds)
     local menu_w = _font.width(16, label) + 20
-    local choice, sub = _menu.dropdown(menu_id, label, cursor_x, toolbar_bounds.y, menu_w, toolbar_bounds.h, items)
+    local choice, sub = _menu.dropdown(
+        menu_id,
+        label,
+        cursor_x,
+        toolbar_bounds.y,
+        menu_w,
+        toolbar_bounds.h,
+        items
+    )
     cursor_x = cursor_x + menu_w
     return choice, sub
 end
 
+--- Folder path of the open project (session.project is either the path or a table holding it)
+local function project_path()
+    local project = _session.project
+    if type(project) == "string" then
+        return project
+    end
+    if type(project) == "table" then
+        return project.path or project.dir or project.root
+    end
+end
+
 --- @section Functions
 
---- Renders top toolbar UI including menus, execution actions, and session status label
---- @param toolbar_bounds table Bounding rectangle for toolbar { x, y, w, h }
---- @param active_theme table Active theme color mapping
+--- Renders toolbar menus, execution controls, and session status.
 function m.draw(toolbar_bounds, active_theme)
     _draw.set_colour(active_theme.bg_panel)
     _draw.rect(toolbar_bounds.x, toolbar_bounds.y, toolbar_bounds.w, toolbar_bounds.h)
     _draw.set_colour(active_theme.border_dark.color)
-    _draw.line(toolbar_bounds.x, toolbar_bounds.y + toolbar_bounds.h - 1, toolbar_bounds.x + toolbar_bounds.w, toolbar_bounds.y + toolbar_bounds.h - 1)
+    _draw.line(
+        toolbar_bounds.x,
+        toolbar_bounds.y + toolbar_bounds.h - 1,
+        toolbar_bounds.x + toolbar_bounds.w,
+        toolbar_bounds.y + toolbar_bounds.h - 1
+    )
 
     cursor_x = toolbar_bounds.x
 
@@ -94,6 +117,13 @@ function m.draw(toolbar_bounds, active_theme)
 
     if picked_option == "New Project" then
         _new_project.open()
+    elseif picked_option == "Load Project" then
+        local path, err = _picker.choose()
+        if path then
+            _session.open(path)
+        elseif err then
+            print("Load project cancelled or failed: " .. err)
+        end
     elseif picked_option == "Close Project" then
         _session.close_project()
     elseif picked_option == "Exit" then
@@ -102,13 +132,16 @@ function m.draw(toolbar_bounds, active_theme)
 
     -- View Menu
     local view_choice, sub_choice = render_menu_dropdown("view_menu", "View", VIEW_MENU_ITEMS, toolbar_bounds)
+
     if view_choice == 1 and sub_choice then
         if sub_choice == 4 then
             _settings.minimap = not _settings.minimap
             _settings.save()
         else
             local panel_key = PANEL_KEYS[sub_choice]
-            m.show[panel_key] = not m.show[panel_key]
+            if panel_key then
+                m.show[panel_key] = not m.show[panel_key]
+            end
         end
     elseif view_choice == 2 and sub_choice then
         _theme.set(_themes.keys[sub_choice])
@@ -116,16 +149,37 @@ function m.draw(toolbar_bounds, active_theme)
         _editor_settings.open()
     end
 
+    if _session.project then
+        -- Build Menu
+        local build_choice, target_choice = render_menu_dropdown("build_menu", "Build", BUILD_MENU_ITEMS, toolbar_bounds)
+
+        if build_choice == 1 and target_choice then
+            local target
+
+            if target_choice == 1 then
+                target = "client"
+            elseif target_choice == 2 and _session.has_server() then
+                target = "server"
+            end
+
+            if target then
+                _console.clear("build")
+
+                local started, err = _builder.build(target, project_path())
+                if not started then
+                    print("Build not started: " .. tostring(err))
+                end
+            end
+        end
+    end
+
     cursor_x = cursor_x + 12
 
-    -- Execution Controls
     if _session.project then
-        -- Client Controls
         if _session.is_running() then
             if render_action_button("Reload Client", toolbar_bounds) then
                 _session.run()
             end
-
             if render_action_button("Stop Client", toolbar_bounds) then
                 _session.stop()
             end
@@ -135,13 +189,11 @@ function m.draw(toolbar_bounds, active_theme)
             end
         end
 
-        -- Server Controls
         if _session.has_server() then
             if _session.is_server_running() then
                 if render_action_button("Reload Server", toolbar_bounds) then
                     _session.run_server()
                 end
-
                 if render_action_button("Stop Server", toolbar_bounds) then
                     _session.stop_server()
                 end
@@ -152,11 +204,11 @@ function m.draw(toolbar_bounds, active_theme)
             end
         end
 
-        -- Session Status
         local client_status = "Client: " .. _session.status_text()
         local server_status = _session.has_server() and (" | Server: " .. (_session.is_server_running() and "Running" or "Stopped")) or ""
-
-        local status_label = client_status .. server_status
+        local build_text = _builder.status_text()
+        local build_status = build_text and (" | " .. build_text) or ""
+        local status_label = client_status .. server_status .. build_status
         local label_y = toolbar_bounds.y + math.floor((toolbar_bounds.h - 16) / 2)
 
         _components.label(
@@ -167,7 +219,6 @@ function m.draw(toolbar_bounds, active_theme)
             _session.status_colour(active_theme)
         )
     end
-
 end
 
 return m
