@@ -23,6 +23,7 @@ local _keys = require("src.editor.ui.panels.code.modules.keys")
 local _pointer = require("src.editor.ui.panels.code.modules.pointer")
 local _minimap = require("src.editor.ui.panels.code.modules.minimap")
 local _image = require("src.editor.ui.panels.image")
+local audio = require("src.editor.ui.panels.audio")
 local _find = require("src.editor.ui.panels.code.modules.find")
 local _settings = require("src.editor.core.settings")
 
@@ -364,8 +365,9 @@ function m.open(file_path)
         return false
     end
 
-    if _image.supports(file_path) then
-        local tab = { path = file_path, name = file_path:match("([^/]+)$") or file_path, image = true }
+    if _image.supports(file_path) or audio.supports(file_path) then
+        local tab = { path = file_path, name = file_path:match("([^/\\]+)$") or file_path,
+            image = _image.supports(file_path), audio = audio.supports(file_path) }
         _state.buffers[#_state.buffers + 1] = tab
         _state.active, _state.selecting = tab, false
         _input.blur()
@@ -406,7 +408,7 @@ end
 function m.open_at(file_path, line)
     if not m.open(file_path) then return false end
     local buffer = _state.active
-    if buffer.image then return false end
+    if buffer.image or buffer.audio then return false end
     line = math.max(1, math.min(#buffer.lines, math.floor(line)))
     _cursor.move_to(buffer, line, 0, false)
     _state.selecting = false
@@ -433,7 +435,9 @@ end
 function m.close_all()
     _find.visible = false
     for _, tab in ipairs(_state.buffers) do
-        if tab.asset then _image.release(tab.asset) end
+        if tab.asset then
+            if tab.audio then audio.release(tab.asset) else _image.release(tab.asset) end
+        end
     end
     _state.buffers, _state.active, _state.selecting = {}, nil, false
     if _input.has_focus(_state.focus_token) then 
@@ -449,6 +453,10 @@ function m.get_notice()
     end
 end
 
+function m.update()
+    audio.update(_state.active)
+end
+
 --- Renders the complete editor panel view inside the target viewport rectangle
 --- @param viewport table Viewport bounding rectangle { x, y, w, h }
 function m.draw(viewport)
@@ -460,7 +468,15 @@ function m.draw(viewport)
     draw_tabs(viewport, theme)
 
     local active_buffer = _state.active
+    audio.activate(active_buffer and active_buffer.audio and active_buffer.asset or nil)
     if not active_buffer then return end
+
+    if active_buffer.audio then
+        _minimap.cancel_drag()
+        audio.draw(active_buffer, { x = viewport.x, y = viewport.y + TAB_H,
+            w = viewport.w, h = viewport.h - TAB_H }, theme)
+        return
+    end
 
     if active_buffer.image then
         _minimap.cancel_drag()
