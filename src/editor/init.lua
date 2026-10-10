@@ -69,6 +69,7 @@ end
 --- @param delta_time number Delta time in seconds
 function m.update(delta_time)
     _session.update(delta_time)
+    _ui.panels.code.update()
 end
 
 --- Stops running sessions and persists open files and panel layout configuration
@@ -76,6 +77,7 @@ function m.close()
     _session.stop()
     _ui.panels.code.save_all()
     _ui.panels.code.close_all()
+    require("src.editor.ui.panels.audio").shutdown()
     _ui.panels.explorer.close()
     _settings.set_theme(_theme.name())
     for panel_key, size_value in pairs(_ui.style.layout.sizes) do
