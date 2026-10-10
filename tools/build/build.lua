@@ -258,6 +258,22 @@ local function build_stub(cache_path)
 
     local include = os.getenv("LUA_INCLUDE") or "C:\\luajit\\src"
     local library = os.getenv("LUA_LIB") or "C:\\luajit\\src\\lua51.lib"
+    -- Installed LuaJIT distributions usually keep headers and libraries beside bin.
+    local executable = (arg[-1] or ""):gsub("\\", "/")
+    local install_root = executable:match("^(.*)/bin/[^/]+$")
+    if install_root then
+        if not os.getenv("LUA_INCLUDE") and not read_file(include .. "/lua.h") then
+            include = install_root .. "/include"
+        end
+        if not os.getenv("LUA_LIB") and not read_file(library) then
+            library = install_root .. "/lib/lua51.lib"
+        end
+    end
+    if not read_file(include .. "/lua.h") or not read_file(library) then
+        fail("LuaJIT development files were not found. Set LUA_INCLUDE to the folder containing lua.h "
+            .. "and LUA_LIB to lua51.lib. Checked: " .. include .. " and " .. library)
+    end
+
     local temp = (os.getenv("TEMP") or ".") .. "\\modit_build"
     make_dir(temp)
 
@@ -296,7 +312,8 @@ local function build_stub(cache_path)
     local built = read_file(temp .. "\\stub.exe")
     if not built then fail("the compiler did not produce a stub") end
 
-    write_file(cache_path, built)
+    make_dir(ROOT .. "/src/bin")
+    if not write_file(cache_path, built) then fail("could not cache launcher: " .. cache_path) end
     emit("success", "Launcher stub ready: " .. cache_path)
     return built
 end
@@ -500,10 +517,12 @@ copy_tree(project, out, "", function(relative, is_folder)
     if is_folder then
         return relative == "build/"
             or relative == "game/save/"
+            or relative == "saves/"
             or (not opts.mods and relative == "mods/")
     end
 
-    return relative:match("%.log$") ~= nil
+    return relative == "factory-save.json"
+        or relative:match("%.log$") ~= nil
         or relative:match("^game/.*%.lua$") ~= nil
 end, extras)
 
