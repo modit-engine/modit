@@ -324,3 +324,9 @@ engine.lighting.set_local_lights({
 ```
 
 Lights face downward, fade smoothly with distance, and use soft analytic box shadows. These are approximate building bounds, not per-voxel silhouettes or shadow maps. Each pass supports the first eight lights and 32 blockers; games should select nearby entries. Emission remains independent. Pass empty tables when changing scenes, or use `lighting.reset()` to restore defaults. Local lights currently affect opaque/translucent models and standard primitives, not the separate water shader.
+
+### Repeated models
+
+`model.draw_many` batches matching opaque, unskinned meshes in normal lit passes using GPU instancing. Different tints/materials stay separate, blended meshes keep depth ordering, and shadow/skinned/default-shader passes use individual draws. Editable transforms are cached by their scalar values; changes to parent transforms, pivots and colours invalidate the affected results.
+
+For VOX assets, `model.load_asset({ key = "machine", path = "machine.vox", combine_vox_colours = true })` combines opaque, non-emissive palette colours into vertex-coloured meshes. Authored scene/animation part names remain; internal palette subparts may be combined and unnamed transform-free containers collapsed. Leave this off when a tool needs to edit individual palette materials. Emissive and translucent materials remain separate. Reload with `replace = true` to change this option on an already loaded key.

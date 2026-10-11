@@ -404,6 +404,13 @@ local receiving = false
 
 local lit = { vertex = VERTEX, fragment = FRAGMENT, uniforms = LIT_UNIFORMS, probe = "sun_dir" }
 local lit_mesh = { vertex = MESH_VERTEX, fragment = MESH_FRAGMENT, uniforms = MESH_UNIFORMS, probe = "sun_dir", map_uniform = "shadowMap" }
+-- Raylib supplies one model matrix per instance; mvp remains the view/projection matrix.
+local instanced_vertex = MESH_VERTEX:gsub("uniform mat4 matModel;", "in mat4 instanceTransform;")
+    :gsub("mat3%(matNormal%)", "transpose(inverse(mat3(instanceTransform)))")
+    :gsub("matModel", "instanceTransform")
+    :gsub("gl_Position = mvp %* vec4%(vertexPosition, 1.0%);", "gl_Position = mvp * instanceTransform * vec4(vertexPosition, 1.0);")
+local lit_instanced = { vertex = instanced_vertex, fragment = MESH_FRAGMENT, uniforms = MESH_UNIFORMS,
+    probe = "sun_dir", map_uniform = "shadowMap" }
 local shadow = { vertex = SHADOW_VERTEX, fragment = SHADOW_FRAGMENT, uniforms = SHADOW_UNIFORMS, probe = "sun_world" }
 local shadow_mesh = { vertex = SHADOW_MESH_VERTEX, fragment = mesh_shadow_fragment(SHADOW_FRAGMENT), uniforms = SHADOW_UNIFORMS, probe = "sun_world" }
 
@@ -412,7 +419,7 @@ local depth_mesh = { vertex = DEPTH_MESH_VERTEX, fragment = mesh_shadow_fragment
 
 local water = { vertex = WATER_VERTEX, fragment = WATER_FRAGMENT, uniforms = WATER_UNIFORMS, probe = "sun_dir" }
 
-local PROGRAMS = { lit, lit_mesh, shadow, shadow_mesh, depth, depth_mesh, water }
+local PROGRAMS = { lit, lit_mesh, lit_instanced, shadow, shadow_mesh, depth, depth_mesh, water }
 
 --- @section Helpers
 
@@ -450,7 +457,7 @@ local function ensure(program)
     for key, name in pairs(program.uniforms) do
         program.locs[key] = _lib.GetShaderLocation(loaded, name)
     end
-    if program == lit or program == lit_mesh then
+    if program == lit or program == lit_mesh or program == lit_instanced then
         program.local_positions, program.local_colours = {}, {}
         program.blocker_min, program.blocker_max = {}, {}
         program.local_counts = _lib.GetShaderLocation(loaded, "localCounts")
@@ -463,9 +470,10 @@ local function ensure(program)
             program.blocker_max[index] = _lib.GetShaderLocation(loaded, "blockerMax[" .. (index - 1) .. "]")
         end
     end
-    if program == lit_mesh then
+    if program == lit_mesh or program == lit_instanced then
         loaded.locs[20] = _lib.GetShaderLocation(loaded, "texture5") -- SHADER_LOC_MAP_EMISSION
     end
+    if program == lit_instanced then loaded.locs[9] = _lib.GetShaderLocationAttrib(loaded, "instanceTransform") end
     if program.map_uniform then
         loaded.locs[MAP_BRDF_LOC] = _lib.GetShaderLocation(loaded, program.map_uniform)
     end
@@ -497,7 +505,7 @@ end
 --- Uploads world-space local lights and soft box shadow casters for the current frame.
 local function upload_local_lights()
     local lights, blockers = local_sources, local_blockers
-    for _, program in ipairs({ lit, lit_mesh }) do
+    for _, program in ipairs({ lit, lit_mesh, lit_instanced }) do
         if ensure(program) then
             set_vec2(program, program.local_counts, math.min(#lights, 8), math.min(#blockers, 32))
             for index = 1, math.min(#lights, 8) do
@@ -536,6 +544,9 @@ local function begin(sdx, sdy, sdz, sr, sg, sb, ar, ag, ab, fog_near, fog_far, f
     upload_lit(lit, sdx, sdy, sdz, sr, sg, sb, ar, ag, ab, fog_near, fog_far, fr, fg, fb)
     if ensure(lit_mesh) then
         upload_lit(lit_mesh, sdx, sdy, sdz, sr, sg, sb, ar, ag, ab, fog_near, fog_far, fr, fg, fb)
+    end
+    if ensure(lit_instanced) then
+        upload_lit(lit_instanced, sdx, sdy, sdz, sr, sg, sb, ar, ag, ab, fog_near, fog_far, fr, fg, fb)
     end
     if ensure(water) then
         upload_lit(water, sdx, sdy, sdz, sr, sg, sb, ar, ag, ab, fog_near, fog_far, fr, fg, fb)
@@ -660,11 +671,12 @@ end
 --- @param colour cdata Emission colour
 --- @param strength number Emission multiplier
 --- @param textured boolean True if an emission texture is bound
-local function set_model_material(smooth, mode, cutoff, colour, strength, textured)
+local function set_model_material(smooth, mode, cutoff, colour, strength, textured, instanced)
     local program = in_map and depth_mesh or (in_shadow and shadow_mesh or (active and lit_mesh))
+    if instanced then program = lit_instanced end
     if not program or not program.shader then return end
     set_vec4(program, program.locs.material, smooth and 1 or 0, mode, cutoff, 0)
-    if program == lit_mesh then
+    if program == lit_mesh or program == lit_instanced then
         set_vec4(program, program.locs.emission,
             colour.r / 255 * strength, colour.g / 255 * strength, colour.b / 255 * strength, textured and 1 or 0)
     end
@@ -729,6 +741,10 @@ return {
     shadow_begin = shadow_begin,
     shadow_end = shadow_end,
     mesh_shader = mesh_shader,
+    instance_shader = function()
+        -- Other passes keep the existing path, including shadow maps and projected shadows.
+        if active and not in_shadow and not in_map and not receiving then return lit_instanced.shader end
+    end,
     set_local_lights = function(lights, blockers)
         local_sources, local_blockers = lights, blockers
     end,

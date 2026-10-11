@@ -8,6 +8,8 @@ local _backend = require("src.engine.backend").window
 
 --- @section Initialisation
 
+local close_requested = false
+
 local m = {
     title = "Modit",
     size = { width = 1280, height = 720 },
@@ -21,6 +23,7 @@ local m = {
 --- Initializes display window and backend rendering context
 --- @param opts table|nil Configuration table containing window, fps, and module options
 function m.init(opts)
+    close_requested = false
     opts = opts or {}
     local w = opts.window or {}
 
@@ -50,7 +53,12 @@ end
 --- Checks whether user requested window close event
 --- @return boolean is_closing True if window close event was signaled
 function m.should_close()
-    return _backend.should_close()
+    return close_requested or _backend.should_close()
+end
+
+--- Requests a clean exit after the current frame; the runner still calls game.quit.
+function m.request_close()
+    close_requested = true
 end
 
 --- @section Flags & Display Modes

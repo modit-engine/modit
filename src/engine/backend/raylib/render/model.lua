@@ -5,7 +5,7 @@
 --- @section Imports
 
 local _raylib = require("src.engine.backend.raylib.ffi")
-local _ffi, _lib = _raylib.ffi, _raylib.lib
+local _ffi, _lib, _Color = _raylib.ffi, _raylib.lib, _raylib.Color
 local _mat4 = require("src.engine.modules.maths.mat4")
 local _json = require("src.engine.core.json")
 local _lighting = require("src.engine.backend.raylib.render.lighting")
@@ -214,7 +214,7 @@ end
 --- @param path string VOX file path
 --- @return table|nil definition Portable asset description
 --- @return string|nil reason
-function m.read_vox(path)
+function m.read_vox(path, combine_colours)
     local file, reason = io.open(path, "rb")
     if not file then return nil, reason end
     local size = file:seek("end")
@@ -222,7 +222,7 @@ function m.read_vox(path)
     file:seek("set", 0)
     local source = file:read("*a")
     file:close()
-    return require("src.engine.modules.render.vox").decode(source)
+    return require("src.engine.modules.render.vox").decode(source, combine_colours)
 end
 
 --- @section Model Lifecycle
@@ -761,6 +761,58 @@ function m.raycast(asset, ray, world_matrix, pose, max_distance)
 end
 
 --- @section Rendering
+
+--- Batches matching opaque meshes. Returns false when the current pass needs individual draws.
+--- @param asset table Backend-owned model asset
+--- @param mesh_index number Zero-based mesh index
+--- @param nodes table World transforms sharing this mesh and tint
+--- @return boolean drawn True if the batch was drawn
+function m.draw_instances(asset, mesh_index, nodes)
+    local shader = _lighting.instance_shader()
+    if not shader or #nodes < 2 then return false end
+    local material_index = asset.native.meshMaterial[mesh_index]
+    local values = nodes[1].values
+    if alpha_mode(asset, material_index, values[14]) == 2 then return false end
+    local transforms = _ffi.new("Matrix[?]", #nodes)
+    local base_values = matrix_values(asset.native.transform)
+    local identity = true
+    for index = 1, 16 do
+        if base_values[index] ~= ((index == 1 or index == 6 or index == 11 or index == 16) and 1 or 0) then identity = false; break end
+    end
+    local base = not identity and _mat4.new(base_values)
+    local mirrored = false
+    for index, node in ipairs(nodes) do
+        local matrix = identity and node.matrix.m or node.matrix:multiply(base).m
+        local transform = transforms[index - 1]
+        transform.m0, transform.m1, transform.m2, transform.m3 = matrix[1], matrix[2], matrix[3], matrix[4]
+        transform.m4, transform.m5, transform.m6, transform.m7 = matrix[5], matrix[6], matrix[7], matrix[8]
+        transform.m8, transform.m9, transform.m10, transform.m11 = matrix[9], matrix[10], matrix[11], matrix[12]
+        transform.m12, transform.m13, transform.m14, transform.m15 = matrix[13], matrix[14], matrix[15], matrix[16]
+        local determinant = transform.m0 * (transform.m5 * transform.m10 - transform.m9 * transform.m6)
+            - transform.m4 * (transform.m1 * transform.m10 - transform.m9 * transform.m2)
+            + transform.m8 * (transform.m1 * transform.m6 - transform.m5 * transform.m2)
+        mirrored = mirrored or determinant < 0
+    end
+    local mesh = asset.native.meshes[mesh_index]
+    local material = asset.native.materials[material_index]
+    local settings = asset.materials[material_index + 1]
+    local previous_shader = material.shader
+    local previous_colour = _ffi.new("Color", material.maps[0].color)
+    local emission = material.maps[EMISSION_MAP_SLOT]
+    _lib.rlDrawRenderBatchActive()
+    _lighting.set_model_material(settings.smooth and mesh.normals ~= nil,
+        alpha_mode(asset, material_index, values[14]), settings.alpha_cutoff,
+        emission.color, settings.emissive_strength, emission.texture.id ~= 0, true)
+    material.shader = shader
+    material.maps[0].color = _Color(math.floor(previous_colour.r * values[11] / 255),
+        math.floor(previous_colour.g * values[12] / 255), math.floor(previous_colour.b * values[13] / 255), previous_colour.a)
+    if settings.double_sided or mirrored then _lib.rlDisableBackfaceCulling() end
+    local ok, reason = pcall(_lib.DrawMeshInstanced, mesh, material, transforms, #nodes)
+    if settings.double_sided or mirrored then _lib.rlEnableBackfaceCulling() end
+    material.shader, material.maps[0].color = previous_shader, previous_colour
+    if not ok then error(reason, 0) end
+    return true
+end
 
 --- Draws an asset with a transform and tint, restoring borrowed material bindings
 --- @param asset table Backend-owned model asset

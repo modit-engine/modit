@@ -116,26 +116,28 @@ local function voxel_key(x, y, z)
     return x + y * 256 + z * 65536
 end
 
-local function make_meshes(model, palette, materials, budget)
+local function make_meshes(model, palette, materials, budget, combine_colours)
     local parts, buckets = {}, {}
     local centre = { math.floor(model.size[1] / 2), math.floor(model.size[2] / 2), math.floor(model.size[3] / 2) }
     local strides = { 1, 256, 65536 }
     local function face(colour_index, normal_axis, direction, slice, u_axis, v_axis, u, v, width, height)
         budget.faces = budget.faces + 1
         if budget.faces > MAX_FACES then error("VOX scene exceeds merged-face budget", 0) end
-        local bucket = buckets[colour_index]
+        local colour = palette[colour_index]
+        local properties = materials[colour_index] or {}
+        local combined = combine_colours and colour[4] == 255 and properties._type ~= "_emit"
+        local bucket_key = combined and "opaque" or colour_index
+        local bucket = buckets[bucket_key]
         if not bucket or #bucket.mesh.vertices >= 180000 then
-            local colour = palette[colour_index]
-            local properties = materials[colour_index] or {}
-            local material = { tint = colour, smooth = false }
+            local material = { tint = combined and {255, 255, 255, 255} or colour, smooth = false }
             if properties._type == "_emit" then
                 local strength = tonumber(properties._emit or properties._weight) or 1
                 material.emissive, material.emissive_strength = { colour[1], colour[2], colour[3] }, math.max(0, strength)
             end
-            bucket = { mesh = { vertices = {}, normals = {} }, materials = { material } }
-            local sequence, name = 1, "palette_" .. colour_index
+            bucket = { mesh = { vertices = {}, normals = {}, colours = combined and {} or nil }, materials = { material } }
+            local sequence, name = 1, combined and "opaque" or "palette_" .. colour_index
             while parts[name] do sequence = sequence + 1; name = "palette_" .. colour_index .. "_" .. sequence end
-            parts[name], buckets[colour_index] = bucket, bucket
+            parts[name], buckets[bucket_key] = bucket, bucket
         end
         local corners = {}
         for index, offset in ipairs({ { 0, 0 }, { width, 0 }, { width, height }, { 0, height } }) do
@@ -149,6 +151,9 @@ local function make_meshes(model, palette, materials, budget)
         normal = { coordinates(normal) }
         local triangles = direction == 1 and { 1, 2, 3, 1, 3, 4 } or { 1, 3, 2, 1, 4, 3 }
         for _, corner in ipairs(triangles) do
+            if combined then
+                for channel = 1, 4 do bucket.mesh.colours[#bucket.mesh.colours + 1] = colour[channel] end
+            end
             for axis = 1, 3 do
                 bucket.mesh.vertices[#bucket.mesh.vertices + 1] = corners[corner][axis]
                 bucket.mesh.normals[#bucket.mesh.normals + 1] = normal[axis]
@@ -200,6 +205,10 @@ local function make_meshes(model, palette, materials, budget)
             end
         end
     end
+    if combine_colours then
+        local first_name, only = next(parts)
+        if only and next(parts, first_name) == nil then return only end
+    end
     return { parts = parts }
 end
 
@@ -209,7 +218,7 @@ end
 --- @param source string Complete VOX bytes
 --- @return table|nil definition Asset description usable by model.load_asset
 --- @return string|nil reason
-function m.decode(source)
+function m.decode(source, combine_colours)
     local ok, result = pcall(function()
         if type(source) ~= "string" or #source < 20 or #source > 268435456 then error("invalid VOX file size", 0) end
         local header = reader(source)
@@ -288,7 +297,7 @@ function m.decode(source)
         local budget, meshes = { faces = 0 }, {}
         local function geometry(index)
             if not models[index] then error("VOX shape references a missing model", 0) end
-            if not meshes[index] then meshes[index] = make_meshes(models[index], palette, materials, budget) end
+            if not meshes[index] then meshes[index] = make_meshes(models[index], palette, materials, budget, combine_colours) end
             return meshes[index]
         end
         if node_count == 0 then
@@ -327,7 +336,17 @@ function m.decode(source)
                 if #translation ~= 3 then error("invalid VOX translation", 0) end
                 definition.x, definition.y, definition.z = coordinates(translation)
                 definition.axis, definition.angle, definition.scale = rotation(node.frame._r)
-                child(node.child)
+                local next_node = nodes[node.child]
+                if combine_colours and next_node and not next_node.attributes._name
+                    and (next_node.kind == "nSHP" or next_node.kind == "nGRP") then
+                    -- These unnamed containers have no transform of their own. Keep
+                    -- the authored transform/part name, without an extra runtime node.
+                    local geometry = scene(node.child, depth + 1)
+                    definition.mesh, definition.materials = geometry.mesh, geometry.materials
+                    definition.parts = geometry.parts or {}
+                else
+                    child(node.child)
+                end
             elseif node.kind == "nGRP" then
                 for _, child_id in ipairs(node.children) do child(child_id) end
             else

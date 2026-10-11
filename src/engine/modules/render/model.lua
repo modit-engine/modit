@@ -18,6 +18,8 @@ local m = {}
 local assets = {} -- key -> { handle, path, revision }
 local asset_revision = 0
 local asset_sequence = 0
+local local_transforms = setmetatable({}, { __mode = "k" })
+local world_transforms = setmetatable({}, { __mode = "k" })
 
 --- @section Helpers
 
@@ -171,7 +173,72 @@ local function animation_state(instance, asset)
     return animation, nil, clip
 end
 
+local missing_component = {}
+
+local function scale_component(scale, axis)
+    if type(scale) == "table" then return with_default(scale[axis], missing_component) end
+    return with_default(scale, missing_component)
+end
+
 local function local_transform(instance)
+    -- Instances are editable tables. Compare scalar inputs, not table identities, so
+    -- in-place edits to vectors/colours invalidate the cached validated transform.
+    if type(instance) ~= "table" then return nil, "expected a model instance" end
+    local axis, scale, pivot, tint = instance.axis, instance.scale, instance.pivot, instance.tint
+    local signature
+    if (axis == nil or type(axis) == "table") and (pivot == nil or type(pivot) == "table")
+        and (tint == nil or type(tint) == "table") then
+        local cached = local_transforms[instance]
+        local previous = cached and cached.signature
+        if previous
+            and previous.key == (instance.key)
+            and previous.x == (instance.x)
+            and previous.y == (instance.y)
+            and previous.z == (instance.z)
+            and previous.angle == (instance.angle)
+            and previous.axis_x == (axis and axis.x)
+            and previous.axis_y == (axis and axis.y)
+            and previous.axis_z == (axis and axis.z)
+            and previous.scale_x == (scale_component(scale, "x"))
+            and previous.scale_y == (scale_component(scale, "y"))
+            and previous.scale_z == (scale_component(scale, "z"))
+            and previous.pivot_x == (pivot and pivot.x)
+            and previous.pivot_y == (pivot and pivot.y)
+            and previous.pivot_z == (pivot and pivot.z)
+            and previous.red == (tint and with_default(tint.r, tint[1]))
+            and previous.green == (tint and with_default(tint.g, tint[2]))
+            and previous.blue == (tint and with_default(tint.b, tint[3]))
+            and previous.alpha == (tint and with_default(tint.a, tint[4]))
+            and previous.has_axis == (axis ~= nil)
+            and previous.has_pivot == (pivot ~= nil)
+            and previous.has_tint == (tint ~= nil)
+            and previous.scale_type == (type(scale))
+        then return cached.matrix, nil, cached.values end
+        signature = {
+            key = instance.key,
+            x = instance.x,
+            y = instance.y,
+            z = instance.z,
+            angle = instance.angle,
+            axis_x = axis and axis.x,
+            axis_y = axis and axis.y,
+            axis_z = axis and axis.z,
+            scale_x = scale_component(scale, "x"),
+            scale_y = scale_component(scale, "y"),
+            scale_z = scale_component(scale, "z"),
+            pivot_x = pivot and pivot.x,
+            pivot_y = pivot and pivot.y,
+            pivot_z = pivot and pivot.z,
+            red = tint and with_default(tint.r, tint[1]),
+            green = tint and with_default(tint.g, tint[2]),
+            blue = tint and with_default(tint.b, tint[3]),
+            alpha = tint and with_default(tint.a, tint[4]),
+            has_axis = axis ~= nil,
+            has_pivot = pivot ~= nil,
+            has_tint = tint ~= nil,
+            scale_type = type(scale),
+        }
+    end
     local values, reason = transform_values(instance)
     if not values then return nil, reason end
     local pivot = instance.pivot or { x = 0, y = 0, z = 0 }
@@ -199,31 +266,52 @@ local function local_transform(instance)
     data[13] = values[1] + pivot.x - data[1] * pivot.x - data[5] * pivot.y - data[9] * pivot.z
     data[14] = values[2] + pivot.y - data[2] * pivot.x - data[6] * pivot.y - data[10] * pivot.z
     data[15] = values[3] + pivot.z - data[3] * pivot.x - data[7] * pivot.y - data[11] * pivot.z
+    if signature then local_transforms[instance] = { signature = signature, matrix = matrix, values = values } end
     return matrix, nil, values
 end
 
-local function world_transform(instance, visited, depth)
-    visited, depth = visited or {}, depth or 0
-    if type(instance) ~= "table" or visited[instance] or depth >= 64 then return nil, "cyclic or excessively deep model hierarchy" end
+local function world_transform(instance, visited, depth, cache)
+    depth = depth or 0
+    if type(instance) ~= "table" or (visited and visited[instance]) or depth >= 64 then return nil, "cyclic or excessively deep model hierarchy" end
+    if cache and cache[instance] then return cache[instance].matrix, nil, cache[instance].values end
+    visited = visited or {}
     visited[instance] = true
     local matrix, reason, values = local_transform(instance)
     if not matrix then return nil, reason end
+    local local_matrix, local_values = matrix, values
+    local parent_matrix, parent_values
     if instance.parent then
-        local parent_matrix, parent_reason, parent_values = world_transform(instance.parent, visited, depth + 1)
+        local parent_reason
+        parent_matrix, parent_reason, parent_values = world_transform(instance.parent, visited, depth + 1, cache)
         if not parent_matrix then return nil, parent_reason end
-        matrix = parent_matrix:multiply(matrix)
-        for index = 11, 14 do values[index] = math.floor(values[index] * parent_values[index] / 255) end
+    end
+    local previous = world_transforms[instance]
+    if previous and previous.local_matrix == local_matrix and previous.parent_matrix == parent_matrix
+        and previous.parent_values == parent_values then
+        if cache then cache[instance] = previous end
+        return previous.matrix, nil, previous.values
+    end
+    if parent_matrix then
+        matrix = parent_matrix:multiply(local_matrix)
+        values = {}
+        for index = 1, 10 do values[index] = local_values[index] end
+        for index = 11, 14 do values[index] = math.floor(local_values[index] * parent_values[index] / 255) end
     end
     for _, value in ipairs(matrix.m) do
         if not finite(value) then return nil, "model transform exceeds renderer range" end
     end
+    local result = { matrix = matrix, values = values, local_matrix = local_matrix,
+        parent_matrix = parent_matrix, parent_values = parent_values }
+    world_transforms[instance] = result
+    if cache then cache[instance] = result end
     return matrix, nil, values
 end
 
-local function collect_nodes(instance, nodes, seen, skip_pose)
+local function collect_nodes(instance, nodes, seen, skip_pose, transform_cache)
     if type(instance) ~= "table" or seen[instance] then return false, "duplicate or cyclic model part" end
     seen[instance] = true
-    local matrix, reason, values = world_transform(instance)
+    transform_cache = transform_cache or {}
+    local matrix, reason, values = world_transform(instance, nil, nil, transform_cache)
     if not matrix then return false, reason end
     local asset = assets[instance.key]
     if not asset then return false, "model is not loaded: " .. instance.key end
@@ -247,7 +335,7 @@ local function collect_nodes(instance, nodes, seen, skip_pose)
         for _, name in ipairs(names) do
             local child = instance.parts[name]
             if type(child) ~= "table" or child.parent ~= instance then return false, "part has the wrong parent" end
-            local ok, child_reason = collect_nodes(child, nodes, seen, skip_pose)
+            local ok, child_reason = collect_nodes(child, nodes, seen, skip_pose, transform_cache)
             if not ok then return false, child_reason end
         end
     end
@@ -341,14 +429,36 @@ function m.draw_many(instances, camera)
         local ok, reason = collect_nodes(instance, nodes, seen)
         if not ok then return fail(reason) end
     end
+    local batches, batch_order = {}, {}
     for _, node in ipairs(nodes) do
-        for _, part in ipairs(_backend.get_draw_parts(node.handle, node.values[14], node.pose)) do
-            local centre = node.matrix:multiply_vec3(part.centre)
-            draws[#draws + 1] = {
-                node = node, mesh_index = part.mesh_index,
-                transparent = part.transparent, order = #draws + 1,
-                depth = (centre.x - position.x) * forward_x + (centre.y - position.y) * forward_y + (centre.z - position.z) * forward_z,
-            }
+        -- Fully transparent parts neither draw nor write depth.
+        if node.values[14] > 0 then
+            for _, part in ipairs(_backend.get_draw_parts(node.handle, node.values[14], node.pose)) do
+                if not part.transparent and not node.pose then
+                    local groups = batches[node.handle]
+                    if not groups then groups = {}; batches[node.handle] = groups end
+                    local key = table.concat({ part.mesh_index, node.values[11], node.values[12], node.values[13], node.values[14] }, ":")
+                    local group = groups[key]
+                    if not group then
+                        group = { handle = node.handle, mesh_index = part.mesh_index, nodes = {} }
+                        groups[key], batch_order[#batch_order + 1] = group, group
+                    end
+                    group.nodes[#group.nodes + 1] = node
+                else
+                    local centre = node.matrix:multiply_vec3(part.centre)
+                    draws[#draws + 1] = { node = node, mesh_index = part.mesh_index,
+                        transparent = part.transparent, order = #draws + 1,
+                        depth = (centre.x - position.x) * forward_x + (centre.y - position.y) * forward_y + (centre.z - position.z) * forward_z }
+                end
+            end
+        end
+    end
+    for _, group in ipairs(batch_order) do
+        if not _backend.draw_instances(group.handle, group.mesh_index, group.nodes) then
+            for _, node in ipairs(group.nodes) do
+                local ok, reason = draw_node(node, group.mesh_index)
+                if not ok then return false, reason end
+            end
         end
     end
     table.sort(draws, function(first, second)
@@ -782,7 +892,7 @@ function m.load_asset(opts)
         if definition.source then
             local source = asset_path(directory, definition.source)
             if source:lower():match("%.vox$") then
-                local scene, scene_reason = _backend.read_vox(source)
+                local scene, scene_reason = _backend.read_vox(source, opts.combine_vox_colours == true)
                 if not scene then error(scene_reason, 0) end
                 record.parts.scene = stage(scene, depth + 1)
             else
@@ -839,7 +949,7 @@ function m.load_asset(opts)
         local definition
         if path:lower():match("%.vox$") then
             local reason
-            definition, reason = _backend.read_vox(path)
+            definition, reason = _backend.read_vox(path, opts.combine_vox_colours == true)
             if not definition then error(reason, 0) end
         elseif path:lower():match("%.lua$") then
             local chunk, reason = loadfile(path)
