@@ -44,6 +44,8 @@ local LIGHTING = { "set_sun", "set_ambient", "set_fog", "set_shadows", "shadow_p
 local SKY = { "set", "draw" }
 local FONT = { "draw", "measure", "width" }
 local WATER = { "set", "set_enabled", "draw", "height_at" }
+local SHAPES = { "push", "pop", "translate", "rotate", "scale", "draw" }
+local POST = { "enable", "disable", "get_size", "begin_scene", "end_scene" }
 
 --- @section Initialisation
 
@@ -106,6 +108,8 @@ local function load_client_modules()
         sky = require("src.engine.modules.render.sky"),
         font = require("src.engine.modules.render.font"),
         water = require("src.engine.modules.render.water"),
+        shapes = require("src.engine.modules.render.shapes"),
+        post = require("src.engine.modules.render.post"),
     }
 end
 
@@ -198,6 +202,8 @@ local function build_client(mod, modules)
     local _sky = client.sky
     local _font = client.font
     local _water = client.water
+    local _shapes = client.shapes
+    local _post = client.post
 
     local api = build_shared(mod, RESERVED.client, modules)
 
@@ -280,6 +286,22 @@ local function build_client(mod, modules)
 
         mod.on_stop(function()
             _sky.reset()
+        end)
+    end
+
+    if modules.shapes then
+        api.shapes = pick(_shapes, SHAPES)
+
+        mod.on_stop(function()
+            _shapes.reset()
+        end)
+    end
+
+    if modules.post then
+        api.post = pick(_post, POST)
+
+        mod.on_stop(function()
+            _post.reset()
         end)
     end
 

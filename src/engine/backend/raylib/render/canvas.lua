@@ -7,6 +7,11 @@
 local _raylib = require("src.engine.backend.raylib.ffi")
 local _ffi, _lib, _Color = _raylib.ffi, _raylib.lib, _raylib.Color
 
+--- @section Constants
+
+local FILTER_POINT = 0
+local FILTER_BILINEAR = 1
+
 --- @section Types & State
 
 local _Vector2 = _ffi.typeof("Vector2")
@@ -26,10 +31,11 @@ local m = {}
 --- Creates a new offscreen render texture target canvas
 --- @param width number Target width in pixels
 --- @param height number Target height in pixels
+--- @param point_filter boolean|nil True for sharp point sampling (pixel art, PS1 look), default smooth bilinear
 --- @return cdata target Created render texture object
-function m.new(width, height)
+function m.new(width, height, point_filter)
     local target = _lib.LoadRenderTexture(width, height)
-    _lib.SetTextureFilter(target.texture, 1)
+    _lib.SetTextureFilter(target.texture, point_filter and FILTER_POINT or FILTER_BILINEAR)
     return target
 end
 

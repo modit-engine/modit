@@ -37,7 +37,9 @@ return {
     lighting = _render.lighting,
     sky = _render.sky,
     model = _render.model,
-    water = require("src.engine.modules.render.water"),
+    water = _render.water,
+    shapes = _render.shapes,
+    post = _render.post,
 
     --- Input
     actions = _input.actions,

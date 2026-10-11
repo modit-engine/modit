@@ -328,6 +328,7 @@ function m.build(vertices, indices, uvs, colours, normals)
         _lib.UnloadMesh(mesh)
         return nil, tostring(reason)
     end
+
     -- Assemble the container in Lua so every engine-owned allocation can be checked and
     -- rolled back. LoadModelFromMesh internally allocates unchecked native arrays.
     local native_model = _ffi.new("Model")
@@ -600,7 +601,7 @@ end
 --- @section Bounds & Materials
 
 --- Copies the cached asset-space bounds
---- @param asset table Backend-owned model asset
+--- @param asset table Backend-owned asset
 --- @return table bounds Min/max vectors
 function m.get_bounds(asset, pose)
     local bounds = pose and pose.bounds or asset.bounds
@@ -611,7 +612,7 @@ function m.get_bounds(asset, pose)
 end
 
 --- Copies colour, emission and surface settings without exposing native handles
---- @param asset table Backend-owned model asset
+--- @param asset table Backend-owned asset
 --- @return table materials Material descriptions (1-based)
 function m.get_materials(asset)
     local result = {}
@@ -633,7 +634,7 @@ function m.get_materials(asset)
 end
 
 --- Updates material settings, preserving them if either texture fails to load
---- @param asset table Backend-owned model asset
+--- @param asset table Backend-owned asset
 --- @param index number Material index (1-based)
 --- @param colour table|nil RGBA colour
 --- @param texture_path string|boolean|nil File path, false for white, or nil to keep

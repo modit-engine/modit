@@ -22,6 +22,7 @@ return {
     model = require(RENDER_PATH .. ".model"),
     water = require(RENDER_PATH .. ".water"),
     font = require(RENDER_PATH .. ".font"),
+    post = require(RENDER_PATH .. ".post"),
 
     mouse = require(INPUT_PATH .. ".mouse"),
     keyboard = require(INPUT_PATH .. ".keyboard"),

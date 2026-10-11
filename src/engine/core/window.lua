@@ -5,6 +5,7 @@
 --- @section Imports
 
 local _backend = require("src.engine.backend").window
+local _post = require("src.engine.modules.render.post")
 
 --- @section Initialisation
 
@@ -47,6 +48,7 @@ end
 
 --- Finalizes frame render pass and swaps display buffers
 function m.end_draw()
+    _post.close_scene() -- never swap buffers while a post-processing scene is still open
     _backend.end_draw()
 end
 

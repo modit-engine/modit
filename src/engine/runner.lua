@@ -184,6 +184,7 @@ local CLIENT_ONLY = {
     lighting = true,
     model = true,
     water = true,
+    shapes = true,
     sky = true,
     camera = true,
     window = true,
