@@ -251,7 +251,10 @@ function m.decode(source)
                 for index = 1, 255 do palette[index] = { content.bytes(4):byte(1, 4) } end
                 content.bytes(4)
             elseif kind == "MATL" then
-                local index = content.count(255)
+                -- MagicaVoxel saves all 256 material slots, although XYZI can only
+                -- reference colours 1..255. Keep the unused final slot as metadata.
+                local index = content.integer()
+                if index < 1 or index > 256 then error("invalid VOX material id", 0) end
                 materials[index] = content.dictionary()
             elseif kind == "LAYR" then
                 local index = content.integer()
