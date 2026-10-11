@@ -5,7 +5,7 @@
 --- @section Imports
 
 local _backend = require("src.engine.backend").network
-local _serializer = require("src.engine.core.network_serializer")
+local _serializer = require("src.engine.core.net.serializer")
 
 --- @section Constants
 

@@ -6,7 +6,7 @@
 
 local _log = require("src.engine.core.log")
 local _fs = require("src.engine.backend.platform." .. require("ffi").os:lower() .. ".filesystem")
-local _sandbox = require("src.engine.core.mod_sandbox")
+local _sandbox = require("src.engine.core.security.mod_sandbox")
 local _commands = require("src.engine.modules.commands")
 
 --- @section Constants

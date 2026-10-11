@@ -6,7 +6,7 @@
 
 local _raylib = require("src.engine.backend.raylib.ffi").lib
 local _model = require("src.engine.modules.render.model")
-local _camera = require("src.engine.modules.camera")
+local _camera = require("src.engine.modules.camera.cam")
 local _draw = require("src.engine.modules.render.draw")
 local _input = require("src.engine.ui.modules.input")
 local _components = require("src.engine.ui.components")

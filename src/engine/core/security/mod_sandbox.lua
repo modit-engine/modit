@@ -4,12 +4,12 @@
 
 --- @section Imports
 
-local _hooks = require("src.engine.modules.hooks")
+local _hooks = require("src.engine.core.hooks")
 local _log = require("src.engine.core.log")
-local _exports = require("src.engine.modules.exports")
+local _exports = require("src.engine.modules.modding.exports")
 local _commands = require("src.engine.modules.commands")
 local _maths = require("src.engine.modules.maths")
-local _filesystem = require("src.engine.modules.filesystem")
+local _filesystem = require("src.engine.modules.io.filesystem")
 
 --- @section Constants
 
@@ -49,7 +49,6 @@ local POST = { "enable", "disable", "get_size", "begin_scene", "end_scene" }
 
 -- Safe on any body: reads, queries and transient pushes
 local PHYSICS = {
-    "init", "update", "shutdown",
     "is_active", "is_valid", "get_gravity", "get_position", "get_rotation", "get_transform",
     "get_linear_velocity", "get_angular_velocity", "get_mass", "is_awake", "get_world_point",
     "get_local_point", "get_world_vector", "get_shape_body", "raycast", "overlap_box",
@@ -62,6 +61,54 @@ local PHYSICS_OWN_SHAPE = { "set_friction", "set_restitution", "set_filter" }
 local PHYSICS_ADD_SHAPE = { "add_box", "add_sphere", "add_capsule" }
 local MAX_PHYSICS_BODIES = 256
 local MAX_PHYSICS_SHAPES = 1024
+
+-- Flat names mods use -> { namespace, function } in engine.physics.
+-- The world lifecycle (init, update, shutdown, set_gravity) is deliberately not mapped
+local PHYSICS_FLAT = {
+    is_active = { "world", "is_active" },
+    get_gravity = { "world", "get_gravity" },
+    get_events = { "world", "get_events" },
+
+    create_body = { "body", "create" },
+    destroy_body = { "body", "destroy" },
+    is_valid = { "body", "is_valid" },
+    get_position = { "body", "get_position" },
+    get_rotation = { "body", "get_rotation" },
+    get_transform = { "body", "get_transform" },
+    set_transform = { "body", "set_transform" },
+    get_world_point = { "body", "get_world_point" },
+    get_local_point = { "body", "get_local_point" },
+    get_world_vector = { "body", "get_world_vector" },
+    get_linear_velocity = { "body", "get_linear_velocity" },
+    set_linear_velocity = { "body", "set_linear_velocity" },
+    get_angular_velocity = { "body", "get_angular_velocity" },
+    set_angular_velocity = { "body", "set_angular_velocity" },
+    apply_force = { "body", "apply_force" },
+    apply_impulse = { "body", "apply_impulse" },
+    apply_torque = { "body", "apply_torque" },
+    apply_angular_impulse = { "body", "apply_angular_impulse" },
+    get_mass = { "body", "get_mass" },
+    set_gravity_scale = { "body", "set_gravity_scale" },
+    set_damping = { "body", "set_damping" },
+    is_awake = { "body", "is_awake" },
+    set_awake = { "body", "set_awake" },
+    set_enabled = { "body", "set_enabled" },
+
+    add_box = { "shape", "add_box" },
+    add_sphere = { "shape", "add_sphere" },
+    add_capsule = { "shape", "add_capsule" },
+    destroy_shape = { "shape", "destroy" },
+    get_shape_body = { "shape", "get_body" },
+    set_friction = { "shape", "set_friction" },
+    set_restitution = { "shape", "set_restitution" },
+    set_filter = { "shape", "set_filter" },
+
+    raycast = { "query", "raycast" },
+    overlap_box = { "query", "overlap_box" },
+
+    quat_from_euler = { "rotation", "from_euler" },
+    quat_to_euler = { "rotation", "to_euler" },
+}
 
 --- @section Initialisation
 
@@ -115,11 +162,11 @@ local function load_client_modules()
     return {
         draw = require("src.engine.modules.render.draw"),
         draw3d = require("src.engine.modules.render.draw3d"),
-        camera = require("src.engine.modules.camera"),
+        camera = require("src.engine.modules.camera.cam"),
         keyboard = require("src.engine.modules.input.keyboard"),
         mouse = require("src.engine.modules.input.mouse"),
         window = require("src.engine.core.window"),
-        audio = require("src.engine.modules.audio"),
+        audio = require("src.engine.modules.audio.audio"),
         lighting = require("src.engine.modules.render.lighting"),
         sky = require("src.engine.modules.render.sky"),
         font = require("src.engine.modules.render.font"),
@@ -203,7 +250,13 @@ local function build_shared(mod, reserved, modules)
 
     if modules.physics then
         -- Required lazily so projects without physics never need the Box3D library
-        local _physics = require("src.engine.modules.physics")
+        local _engine_physics = require("src.engine.modules.physics")
+        local _physics = {}
+
+        for flat_name, path in pairs(PHYSICS_FLAT) do
+            _physics[flat_name] = _engine_physics[path[1]][path[2]]
+        end
+
         local physics = pick(_physics, PHYSICS)
         local owned = {}
         local body_count, shape_count = 0, 0

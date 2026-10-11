@@ -150,7 +150,7 @@ end
 
 --- @section Server
 
-local server_host = require("src.engine.core.server_host")
+local server_host = require("src.engine.core.net.server_host")
 
 local server_enabled = type(conf.server) == "table"
     and conf.server.enabled == true
@@ -167,14 +167,14 @@ end
 local HEADLESS_MODULES = {
     log = "src.engine.core.log",
     json = "src.engine.core.json",
-    hooks = "src.engine.modules.hooks",
-    exports = "src.engine.modules.exports",
+    hooks = "src.engine.core.hooks",
+    exports = "src.engine.modules.modding.exports",
     commands = "src.engine.modules.commands",
-    network = "src.engine.modules.network",
+    network = "src.engine.modules.server.network",
     runtime = "src.engine.modules.runtime",
-    filesystem = "src.engine.modules.filesystem",
-    mods = "src.engine.modules.mods",
-    server_console = "src.engine.modules.server_console",
+    filesystem = "src.engine.modules.io.filesystem",
+    mods = "src.engine.modules.modding.manager",
+    server_console = "src.engine.modules.server.console",
     physics = "src.engine.modules.physics"
 }
 
@@ -269,7 +269,7 @@ local function run_headless()
 
     local should_stop
 
-    local console_ok, console = pcall(require, "src.engine.modules.server_console")
+    local console_ok, console = pcall(require, "src.engine.modules.server.console")
 
     if console_ok then
         should_stop = function()

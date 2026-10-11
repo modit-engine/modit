@@ -12,7 +12,7 @@ return {
     },
     sizes = {
         left = 302,
-        right = 278,
         bottom = 227,
+        right = 278,
     },
 }

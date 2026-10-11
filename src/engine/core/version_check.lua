@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _http = require("src.engine.modules.http")
+local _http = require("src.engine.modules.io.http")
 local _log = require("src.engine.core.log")
 local _json = require("src.engine.core.json")
 
