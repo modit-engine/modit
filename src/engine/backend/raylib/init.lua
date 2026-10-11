@@ -19,6 +19,8 @@ return {
     lighting = require(RENDER_PATH .. ".lighting"),
     sky = require(RENDER_PATH .. ".sky"),
     image = require(RENDER_PATH .. ".image"),
+    model = require(RENDER_PATH .. ".model"),
+    water = require(RENDER_PATH .. ".water"),
     font = require(RENDER_PATH .. ".font"),
 
     mouse = require(INPUT_PATH .. ".mouse"),

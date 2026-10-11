@@ -192,6 +192,15 @@ do
     section("Functions", lines)
 end
 
+-- Small rlgl state surface needed by model transparency. Keep generated bindings reproducible.
+section("Render State Functions", {
+    "void rlDrawRenderBatchActive(void);",
+    "void rlDisableDepthMask(void);",
+    "void rlEnableDepthMask(void);",
+    "void rlDisableBackfaceCulling(void);",
+    "void rlEnableBackfaceCulling(void);",
+})
+
 add(([[
 --- @section Library Binding Loading
 

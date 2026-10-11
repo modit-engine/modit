@@ -1,5 +1,5 @@
 --- @module sky
---- @file src/engine/modules/sky.lua
+--- @file src/engine/modules/render/sky.lua
 --- @description Gradient sky backdrop that follows camera pitch. Draw it before camera:begin_3d.
 
 --- @section Imports

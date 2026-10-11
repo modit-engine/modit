@@ -1380,6 +1380,16 @@ void AttachAudioMixedProcessor(AudioCallback); // Attach audio stream processor 
 void DetachAudioMixedProcessor(AudioCallback); // Detach audio stream processor from the entire audio pipeline
 ]]
 
+--- @section Render State Functions
+
+_ffi.cdef[[
+void rlDrawRenderBatchActive(void);
+void rlDisableDepthMask(void);
+void rlEnableDepthMask(void);
+void rlDisableBackfaceCulling(void);
+void rlEnableBackfaceCulling(void);
+]]
+
 --- @section Library Binding Loading
 
 local ok, raylib_lib = pcall(_ffi.load, "vendor/raylib/lib/raylib")

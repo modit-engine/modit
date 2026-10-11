@@ -182,6 +182,8 @@ local CLIENT_ONLY = {
     draw = true,
     draw3d = true,
     lighting = true,
+    model = true,
+    water = true,
     sky = true,
     camera = true,
     window = true,
@@ -349,6 +351,8 @@ end
 --- @section Boot
 
 local engine = require("src.engine")
+engine.config = conf
+engine.game_dir = GAME_DIR
 _G[GLOBAL_NAME] = engine
 engine.log.sink = emit
 

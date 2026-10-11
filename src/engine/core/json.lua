@@ -206,7 +206,7 @@ local function decode_value(input, index)
         end
     end
 
-    local number = input:match("^-?(%d+%.?%d*[eE]?[+-]?%d*)", index)
+    local number = input:match("^(-?%d+%.?%d*[eE]?[+-]?%d*)", index)
     if number then
         local value = tonumber(number)
         if not value then decode_error(input, index, "invalid number") end

@@ -26,6 +26,8 @@ return {
     audio = _raylib.audio,
     font = _raylib.font,
     image = _raylib.image,
+    model = _raylib.model,
+    water = _raylib.water,
 
     process = require("src.engine.backend.platform." .. PLATFORM .. ".process"),
     filesystem = require("src.engine.backend.platform." .. PLATFORM .. ".filesystem"),

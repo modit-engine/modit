@@ -90,6 +90,11 @@ end
 
 --- Closes audio device (if active) and shuts down window context
 function m.close()
+    if not _lib.IsWindowReady() then return end
+    local model = package.loaded["src.engine.backend.raylib.render.model"]
+    if model then model.cleanup() end
+    local lighting = package.loaded["src.engine.backend.raylib.render.lighting"]
+    if lighting then lighting.free() end
     if audio_device_active then
         _lib.CloseAudioDevice()
         audio_device_active = false

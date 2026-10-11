@@ -14,5 +14,6 @@ return {
     font = require(PATH .. ".font"),
     image = require(PATH .. ".image"),
     lighting = require(PATH .. ".lighting"),
-    sky = require(PATH .. ".sky")
+    sky = require(PATH .. ".sky"),
+    model = require(PATH .. ".model")
 }
