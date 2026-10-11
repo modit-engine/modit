@@ -21,10 +21,15 @@ local SHADOW_MAP_SLOT = 10 -- MATERIAL_MAP_BRDF: temporarily borrowed for shadow
 local default_material = nil
 local live_assets = {}
 
-local position_vec = _ffi.new("Vector3")
-local axis_vec = _ffi.new("Vector3")
-local scale_vec = _ffi.new("Vector3")
+local _Vector3 = _ffi.typeof("Vector3")
+local position_vec = _Vector3()
+local axis_vec = _Vector3()
+local scale_vec = _Vector3()
+local tint = _Color(255, 255, 255, 255)
 local draw_tint = _ffi.new("Color")
+
+local transform_matrix = _ffi.new("Matrix")
+local transform_floats = _ffi.cast("float*", transform_matrix)
 
 --- @section Initialisation
 
@@ -909,6 +914,53 @@ function m.draw(asset, x, y, z, axis_x, axis_y, axis_z, angle, scale_x, scale_y,
         end
     end
     return true
+end
+
+--- Points every material at the right shader and shadow map for the current pass
+--- @param model cdata Model object
+--- @return boolean ready False when the current pass must skip this model
+local function bind_materials(model)
+    local shader = _lighting.mesh_shader()
+    if shader == false then return false end
+    shader = shader or get_default_material().shader
+
+    local shadow_texture = _lighting.shadow_texture()
+    for index = 0, model.materialCount - 1 do
+        local material = model.materials[index]
+        material.shader = shader
+        if shadow_texture then
+            material.maps[SHADOW_MAP_SLOT].texture = shadow_texture
+        else
+            material.maps[SHADOW_MAP_SLOT].texture.id = 0
+        end
+    end
+    return true
+end
+
+--- Draws a model with a full 4x4 transform.
+--- @param asset table Backend-owned model asset
+--- @param rows table 16 numbers, row-major
+--- @param r number Tint red
+--- @param g number Tint green
+--- @param b number Tint blue
+--- @param a number Tint alpha
+function m.draw_matrix(asset, rows, r, g, b, a)
+    local model = asset.native or asset
+
+    if not bind_materials(model) then return end
+
+    for index = 0, 15 do
+        transform_floats[index] = rows[index + 1]
+    end
+
+    model.transform = transform_matrix
+
+    position_vec.x, position_vec.y, position_vec.z = 0, 0, 0
+    axis_vec.x, axis_vec.y, axis_vec.z = 0, 1, 0
+    scale_vec.x, scale_vec.y, scale_vec.z = 1, 1, 1
+    tint.r, tint.g, tint.b, tint.a = r, g, b, a
+
+    _lib.DrawModelEx(model, position_vec, axis_vec, 0, scale_vec, tint)
 end
 
 return m
