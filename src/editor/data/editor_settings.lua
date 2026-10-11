@@ -11,8 +11,8 @@ return {
         "projects/test_project",
     },
     sizes = {
-        bottom = 227,
         left = 302,
         right = 278,
+        bottom = 227,
     },
 }

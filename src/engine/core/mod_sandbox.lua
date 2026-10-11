@@ -47,6 +47,22 @@ local WATER = { "set", "set_enabled", "draw", "height_at" }
 local SHAPES = { "push", "pop", "translate", "rotate", "scale", "draw" }
 local POST = { "enable", "disable", "get_size", "begin_scene", "end_scene" }
 
+-- Safe on any body: reads, queries and transient pushes
+local PHYSICS = {
+    "init", "update", "shutdown",
+    "is_active", "is_valid", "get_gravity", "get_position", "get_rotation", "get_transform",
+    "get_linear_velocity", "get_angular_velocity", "get_mass", "is_awake", "get_world_point",
+    "get_local_point", "get_world_vector", "get_shape_body", "raycast", "overlap_box",
+    "quat_from_euler", "quat_to_euler", "set_linear_velocity", "set_angular_velocity",
+    "apply_force", "apply_impulse", "apply_torque", "apply_angular_impulse", "set_awake",
+}
+-- Change persistent state, so they only work on bodies the mod created
+local PHYSICS_OWN_BODY = { "set_transform", "set_enabled", "set_gravity_scale", "set_damping" }
+local PHYSICS_OWN_SHAPE = { "set_friction", "set_restitution", "set_filter" }
+local PHYSICS_ADD_SHAPE = { "add_box", "add_sphere", "add_capsule" }
+local MAX_PHYSICS_BODIES = 256
+local MAX_PHYSICS_SHAPES = 1024
+
 --- @section Initialisation
 
 local m = {}
@@ -183,6 +199,121 @@ local function build_shared(mod, reserved, modules)
                 return _filesystem.delete(scope(path))
             end,
         }
+    end
+
+    if modules.physics then
+        -- Required lazily so projects without physics never need the Box3D library
+        local _physics = require("src.engine.modules.physics")
+        local physics = pick(_physics, PHYSICS)
+        local owned = {}
+        local body_count, shape_count = 0, 0
+
+        --- Drops bodies that no longer exist (world was shut down) and recounts
+        local function prune()
+            body_count, shape_count = 0, 0
+            for handle, shapes in pairs(owned) do
+                if _physics.is_valid(handle) then
+                    body_count = body_count + 1
+                    shape_count = shape_count + shapes
+                else
+                    owned[handle] = nil
+                end
+            end
+        end
+
+        local function own_body(body)
+            if owned[body] == nil then
+                error("physics body is not owned by this mod: " .. tostring(body), 3)
+            end
+            return body
+        end
+
+        local function own_shape(shape)
+            own_body(_physics.get_shape_body(shape))
+            return shape
+        end
+
+        physics.get_events = function()
+            return deep_copy(_physics.get_events())
+        end
+
+        physics.create_body = function(opts)
+            if body_count >= MAX_PHYSICS_BODIES then prune() end
+            if body_count >= MAX_PHYSICS_BODIES then
+                error("physics body limit reached (" .. MAX_PHYSICS_BODIES .. ")", 2)
+            end
+
+            local handle = _physics.create_body(opts)
+            owned[handle] = 0
+            body_count = body_count + 1
+            return handle
+        end
+
+        physics.destroy_body = function(body)
+            own_body(body)
+
+            local shapes = owned[body]
+            local destroyed = _physics.destroy_body(body)
+            owned[body] = nil
+            body_count = body_count - 1
+            shape_count = shape_count - shapes
+            return destroyed
+        end
+
+        for _, name in ipairs(PHYSICS_ADD_SHAPE) do
+            local add = _physics[name]
+
+            physics[name] = function(body, ...)
+                own_body(body)
+
+                if shape_count >= MAX_PHYSICS_SHAPES then prune() end
+                if shape_count >= MAX_PHYSICS_SHAPES then
+                    error("physics shape limit reached (" .. MAX_PHYSICS_SHAPES .. ")", 2)
+                end
+
+                local handle = add(body, ...)
+                owned[body] = owned[body] + 1
+                shape_count = shape_count + 1
+                return handle
+            end
+        end
+
+        physics.destroy_shape = function(shape)
+            local body = _physics.get_shape_body(own_shape(shape))
+
+            _physics.destroy_shape(shape)
+            owned[body] = owned[body] - 1
+            shape_count = shape_count - 1
+        end
+
+        for _, name in ipairs(PHYSICS_OWN_BODY) do
+            local fn = _physics[name]
+
+            physics[name] = function(body, ...)
+                return fn(own_body(body), ...)
+            end
+        end
+
+        for _, name in ipairs(PHYSICS_OWN_SHAPE) do
+            local fn = _physics[name]
+
+            physics[name] = function(shape, ...)
+                return fn(own_shape(shape), ...)
+            end
+        end
+
+        mod.on_stop(function()
+            for handle in pairs(owned) do
+                if _physics.is_valid(handle) then
+                    pcall(_physics.destroy_body, handle)
+                end
+            end
+
+            owned = {}
+            body_count, shape_count = 0, 0
+        end)
+
+        api.physics = physics
     end
 
     return api

@@ -175,6 +175,7 @@ local HEADLESS_MODULES = {
     filesystem = "src.engine.modules.filesystem",
     mods = "src.engine.modules.mods",
     server_console = "src.engine.modules.server_console",
+    physics = "src.engine.modules.physics"
 }
 
 local CLIENT_ONLY = {
@@ -194,28 +195,21 @@ local CLIENT_ONLY = {
     ui = true,
 }
 
-
 local function build_headless_engine()
     local engine = {}
 
-    -- Publish the namespace before loading modules that may access it.
     engine.config = conf
     engine.game_dir = GAME_DIR
     _G[GLOBAL_NAME] = engine
 
-    -- Load the base services first. Do not load builtin_commands here:
-    -- it requires engine.commands and engine.mods to already exist.
+
     for name, path in pairs(HEADLESS_MODULES) do
         local ok, mod = pcall(require, path)
 
         if not ok then
             local reason = tostring(mod)
-            _log.error(("%s.%s failed to load from %s:\n%s"):format(
-                GLOBAL_NAME, name, path, reason
-            ))
-            error(("Failed to load required headless module '%s':\n%s"):format(
-                path, reason
-            ), 0)
+            _log.error(("%s.%s failed to load from %s:\n%s"):format(GLOBAL_NAME, name, path, reason))
+            error(("Failed to load required headless module '%s':\n%s"):format(path, reason), 0)
         end
 
         engine[name] = mod

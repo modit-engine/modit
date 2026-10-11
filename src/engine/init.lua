@@ -28,6 +28,7 @@ return {
     maths = require("src.engine.modules.maths"),
     mods = require("src.engine.modules.mods"),
     network = require("src.engine.modules.network"),
+    physics = require("src.engine.modules.physics"),
 
     --- Render
     draw = _render.draw,

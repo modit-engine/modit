@@ -1,3 +1,18 @@
+# v0.9.0
+
+Physics & Box3D Integration.
+
+- Integrated the **Box3D** physics engine backend under `engine/backend/box3d/`, featuring comprehensive modular wrappers (`body.lua`, `events.lua`, `query.lua`, `shape.lua`, `world.lua`) alongside generated FFI bindings.
+- Added the core engine physics module (`modules/physics.lua`) to expose physics capabilities.
+- Added build configuration support for Box3D, enabling automatic runtime detection of single-precision (`float`) versus double-precision (`BOX3D_DOUBLE_PRECISION`) builds via `b3IsDoublePrecision()` and conditionally mapping `b3Pos` and `b3WorldTransform` types.
+
+Notes:
+- Be careful not to spam or overload physics tick/update loops with unhandled errors. Rapid failures in `update` listeners can trigger table overflows and disconnects:
+error     20:41:04    network connection failed: connection refused
+error     20:41:37    [hooks] 'update' listener from default_world removed after error: table overflow
+
+This will be fully addressed and fixed before `v0.10.0`.
+
 # v0.8.0
 
 Shadows & Water
