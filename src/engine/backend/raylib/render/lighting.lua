@@ -40,17 +40,21 @@ void main() {
 local MESH_VERTEX = [[
 #version 330
 in vec3 vertexPosition;
+in vec3 vertexNormal;
 in vec2 vertexTexCoord;
 in vec4 vertexColor;
 uniform mat4 mvp;
 uniform mat4 matView;
 uniform mat4 matModel;
+uniform mat4 matNormal;
 uniform mat4 lightVP;
 out vec2 fragTexCoord;
 out vec4 fragColor;
 out vec3 viewPos;
+out vec3 viewNormal;
 out vec4 lightPos;
 void main() {
+    viewNormal = mat3(matView) * mat3(matNormal) * vertexNormal;
     fragTexCoord = vertexTexCoord;
     fragColor = vertexColor;
     viewPos = (matView * matModel * vec4(vertexPosition, 1.0)).xyz;
@@ -64,8 +68,12 @@ local MESH_FRAGMENT = [[
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 viewPos;
+in vec3 viewNormal;
 in vec4 lightPos;
 uniform sampler2D texture0;
+uniform sampler2D texture5;
+uniform vec4 emission;
+uniform vec4 materialParams;
 uniform sampler2D shadowMap;
 uniform vec4 colDiffuse;
 uniform vec3 sunDir;
@@ -80,7 +88,12 @@ float unpack_depth(vec3 c) {
 }
 void main() {
     vec4 base = texture(texture0, fragTexCoord) * colDiffuse * fragColor;
+    if (materialParams.y > 0.5 && materialParams.y < 1.5 && base.a < materialParams.z) discard;
+    if (materialParams.y < 1.5) base.a = 1.0;
     vec3 c = cross(dFdx(viewPos), dFdy(viewPos));
+    if (materialParams.x > 0.5 && dot(viewNormal, viewNormal) > 1e-10) {
+        c = gl_FrontFacing ? viewNormal : -viewNormal;
+    }
     float len = length(c);
     float ndl = len > 1e-10 ? max(dot(c / len, -sunDir), 0.0) : 1.0;
     float sun_vis = 1.0;
@@ -100,6 +113,7 @@ void main() {
         }
     }
     vec3 lit = base.rgb * min(ambient + sunColour * ndl * sun_vis, vec3(1.5));
+    lit += emission.rgb * (emission.a > 0.5 ? texture(texture5, fragTexCoord).rgb : vec3(1.0));
     float fog = clamp((-viewPos.z - fogRange.x) / (fogRange.y - fogRange.x), 0.0, 1.0);
     finalColor = vec4(mix(lit, fogColour, fog), base.a);
 }
@@ -148,6 +162,10 @@ void main() {
 local SHADOW_MESH_VERTEX = [[
 #version 330
 in vec3 vertexPosition;
+in vec2 vertexTexCoord;
+in vec4 vertexColor;
+out vec2 fragTexCoord;
+out float vertexAlpha;
 uniform mat4 matProjection;
 uniform mat4 matView;
 uniform mat4 matModel;
@@ -155,6 +173,8 @@ uniform vec3 sunWorld;
 uniform vec4 shadow;
 out vec3 viewPos;
 void main() {
+    fragTexCoord = vertexTexCoord;
+    vertexAlpha = vertexColor.a;
     vec3 p = (matModel * vec4(vertexPosition, 1.0)).xyz;
     p += sunWorld * ((shadow.x - p.y) / sunWorld.y);
     viewPos = (matView * vec4(p, 1.0)).xyz;
@@ -227,9 +247,15 @@ void main() {
 local DEPTH_MESH_VERTEX = [[
 #version 330
 in vec3 vertexPosition;
+in vec2 vertexTexCoord;
+in vec4 vertexColor;
+out vec2 fragTexCoord;
+out float vertexAlpha;
 uniform mat4 matModel;
 uniform mat4 lightVP;
 void main() {
+    fragTexCoord = vertexTexCoord;
+    vertexAlpha = vertexColor.a;
     gl_Position = lightVP * (matModel * vec4(vertexPosition, 1.0));
 }
 ]]
@@ -247,6 +273,21 @@ void main() {
 }
 ]]
 
+local MESH_ALPHA = [[
+in vec2 fragTexCoord;
+in float vertexAlpha;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+uniform vec4 materialParams;
+]]
+
+local function mesh_shadow_fragment(source)
+    source = source:gsub("#version 330", "#version 330\n" .. MESH_ALPHA)
+    return (source:gsub("void main%(%) {", [[void main() {
+    float alpha = texture(texture0, fragTexCoord).a * colDiffuse.a * vertexAlpha;
+    if (materialParams.y > 0.5 && alpha < materialParams.z) discard;]]))
+end
+
 local LIT_UNIFORMS = {
     sun_dir = "sunDir",
     sun_colour = "sunColour",
@@ -263,9 +304,12 @@ local MESH_UNIFORMS = {
     fog_range = "fogRange",
     light_vp = "lightVP",
     shadow_params = "shadowParams",
+    material = "materialParams",
+    emission = "emission",
 }
 
 local DEPTH_UNIFORMS = {
+    material = "materialParams",
     light_vp = "lightVP",
 }
 
@@ -280,6 +324,7 @@ local WATER_UNIFORMS = {
 }
 
 local SHADOW_UNIFORMS = {
+    material = "materialParams",
     sun_world = "sunWorld",
     shadow = "shadow",
 }
@@ -314,10 +359,10 @@ local receiving = false
 local lit = { vertex = VERTEX, fragment = FRAGMENT, uniforms = LIT_UNIFORMS, probe = "sun_dir" }
 local lit_mesh = { vertex = MESH_VERTEX, fragment = MESH_FRAGMENT, uniforms = MESH_UNIFORMS, probe = "sun_dir", map_uniform = "shadowMap" }
 local shadow = { vertex = SHADOW_VERTEX, fragment = SHADOW_FRAGMENT, uniforms = SHADOW_UNIFORMS, probe = "sun_world" }
-local shadow_mesh = { vertex = SHADOW_MESH_VERTEX, fragment = SHADOW_FRAGMENT, uniforms = SHADOW_UNIFORMS, probe = "sun_world" }
+local shadow_mesh = { vertex = SHADOW_MESH_VERTEX, fragment = mesh_shadow_fragment(SHADOW_FRAGMENT), uniforms = SHADOW_UNIFORMS, probe = "sun_world" }
 
 local depth = { vertex = DEPTH_VERTEX, fragment = DEPTH_FRAGMENT, uniforms = DEPTH_UNIFORMS, probe = "light_vp" }
-local depth_mesh = { vertex = DEPTH_MESH_VERTEX, fragment = DEPTH_FRAGMENT, uniforms = DEPTH_UNIFORMS, probe = "light_vp" }
+local depth_mesh = { vertex = DEPTH_MESH_VERTEX, fragment = mesh_shadow_fragment(DEPTH_FRAGMENT), uniforms = DEPTH_UNIFORMS, probe = "light_vp" }
 
 local water = { vertex = WATER_VERTEX, fragment = WATER_FRAGMENT, uniforms = WATER_UNIFORMS, probe = "sun_dir" }
 
@@ -349,6 +394,7 @@ local function ensure(program)
 
     local loaded = _lib.LoadShaderFromMemory(program.vertex, program.fragment)
     if _lib.GetShaderLocation(loaded, program.uniforms[program.probe]) < 0 then
+        _lib.UnloadShader(loaded)
         program.failed = true
         return false
     end
@@ -357,6 +403,9 @@ local function ensure(program)
     program.locs = {}
     for key, name in pairs(program.uniforms) do
         program.locs[key] = _lib.GetShaderLocation(loaded, name)
+    end
+    if program == lit_mesh then
+        loaded.locs[20] = _lib.GetShaderLocation(loaded, "texture5") -- SHADER_LOC_MAP_EMISSION
     end
     if program.map_uniform then
         loaded.locs[MAP_BRDF_LOC] = _lib.GetShaderLocation(loaded, program.map_uniform)
@@ -524,6 +573,28 @@ local function shadow_texture()
     return nil
 end
 
+--- Uploads per-mesh material values for the current lighting or shadow pass
+--- @param smooth boolean Use the mesh normals rather than faceted derivatives
+--- @param mode number 0 = opaque, 1 = mask, 2 = blend
+--- @param cutoff number Alpha cutoff (0-1)
+--- @param colour cdata Emission colour
+--- @param strength number Emission multiplier
+--- @param textured boolean True if an emission texture is bound
+local function set_model_material(smooth, mode, cutoff, colour, strength, textured)
+    local program = in_map and depth_mesh or (in_shadow and shadow_mesh or (active and lit_mesh))
+    if not program or not program.shader then return end
+    set_vec4(program, program.locs.material, smooth and 1 or 0, mode, cutoff, 0)
+    if program == lit_mesh then
+        set_vec4(program, program.locs.emission,
+            colour.r / 255 * strength, colour.g / 255 * strength, colour.b / 255 * strength, textured and 1 or 0)
+    end
+end
+
+--- True while models are being rendered as shadow casters
+local function is_shadow_pass()
+    return in_shadow or in_map
+end
+
 --- Gets the water shader, only inside a normal lit 3D pass
 --- @return cdata|nil shader Water shader, or nil when water cant draw right now
 local function water_shader()
@@ -562,7 +633,7 @@ end
 local function free()
     for _, program in ipairs(PROGRAMS) do
         if program.shader then _lib.UnloadShader(program.shader) end
-        program.shader, program.locs = nil, nil
+        program.shader, program.locs, program.failed = nil, nil, nil
     end
     if map_target then
         _lib.UnloadRenderTexture(map_target)
@@ -577,6 +648,8 @@ return {
     shadow_begin = shadow_begin,
     shadow_end = shadow_end,
     mesh_shader = mesh_shader,
+    set_model_material = set_model_material,
+    is_shadow_pass = is_shadow_pass,
     water_shader = water_shader,
     set_water = set_water,
     map_begin = map_begin,

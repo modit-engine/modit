@@ -152,6 +152,11 @@ end
 
 --- Closes display window and destroys graphics context
 function m.close()
+    -- Drop public handles while their graphics context is still alive.
+    local water = package.loaded["src.engine.modules.render.water"]
+    if water then water.reset() end
+    local model = package.loaded["src.engine.modules.render.model"]
+    if model then model.cleanup() end
     _backend.close()
 end
 

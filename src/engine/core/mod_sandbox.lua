@@ -42,13 +42,13 @@ local AUDIO = {
 local IMAGE = { "get_size", "draw", "draw_frame", "draw_sprite" }
 local LIGHTING = { "set_sun", "set_ambient", "set_fog", "set_shadows", "shadow_pass", "shadow_map_pass", "blob" }
 local SKY = { "set", "draw" }
-local MODEL = { "draw" }
 local FONT = { "draw", "measure", "width" }
 local WATER = { "set", "set_enabled", "draw", "height_at" }
 
 --- @section Initialisation
 
 local m = {}
+local model_scope_id = 0
 
 --- @section Helpers
 
@@ -306,50 +306,148 @@ local function build_client(mod, modules)
     if modules.model then
         local engine = assert(rawget(_G, "engine"), "engine namespace is not initialized")
         local _model = assert(engine.model, "engine.model is unavailable")
-        local model = pick(_model, MODEL)
+        local model = {}
         local owned = {}
+        local stopped = false
+        model_scope_id = model_scope_id + 1
+        local prefix = "mod_model:" .. model_scope_id .. ":"
 
-        model.load = function(opts)
-            if type(opts) ~= "table" then
-                error("model.load expects a table", 2)
+        local function scoped_key(key)
+            if stopped then error("model scope has stopped", 3) end
+            if type(key) ~= "string" or key == "" or key:find("\0", 1, true) then
+                error("model key must be a nonempty string", 3)
             end
-
-            local safe = {}
-            for key, value in pairs(opts) do
-                safe[key] = value
-            end
-            safe.path = resolve(opts.path)
-
-            local ok = _model.load(safe)
-            if ok then
-                owned[opts.key] = true
-            end
-            return ok
+            return prefix .. key
         end
 
-        model.build = function(opts)
-            if type(opts) ~= "table" then
-                error("model.build expects a table", 2)
-            end
+        local function scoped_options(opts)
+            if type(opts) ~= "table" then error("model operation expects a table", 3) end
+            local safe = {}
+            for key, value in pairs(opts) do safe[key] = value end
+            safe.key = scoped_key(opts.key)
+            return safe
+        end
 
-            local ok = _model.build(opts)
-            if ok then
-                owned[opts.key] = true
+        local function scoped_graph(instance, copies, depth)
+            if type(instance) ~= "table" then error("model instance must be a table", 3) end
+            copies, depth = copies or {}, depth or 0
+            if copies[instance] then return copies[instance] end
+            if depth >= 128 then error("model hierarchy is too deep", 3) end
+            local safe = scoped_options(instance)
+            copies[instance] = safe
+            if instance.parent then safe.parent = scoped_graph(instance.parent, copies, depth + 1) end
+            if instance.parts then
+                if type(instance.parts) ~= "table" then error("parts must be a table", 3) end
+                safe.parts = {}
+                for name, child in pairs(instance.parts) do safe.parts[name] = scoped_graph(child, copies, depth + 1) end
             end
-            return ok
+            return safe
+        end
+
+        for _, operation in ipairs({ "load", "build", "draw", "create_instance", "set_material", "load_animations", "load_asset" }) do
+            local operation_name = operation
+            model[operation_name] = function(opts)
+                local safe = operation_name == "draw" and scoped_graph(opts) or scoped_options(opts)
+                if operation_name == "load" or operation_name == "load_asset" or (operation_name == "load_animations" and opts.path ~= nil) then safe.path = resolve(opts.path) end
+                if operation_name == "load_asset" then safe.base_dir = nil end
+                if operation_name == "set_material" then
+                    for _, field in ipairs({ "texture", "emissive_texture" }) do
+                        if opts[field] ~= nil and opts[field] ~= false then safe[field] = resolve(opts[field]) end
+                    end
+                end
+                local result, reason = _model[operation_name](safe)
+                if result and (operation_name == "load" or operation_name == "build" or operation_name == "load_asset") then
+                    owned[opts.key] = true
+                elseif result and operation_name == "create_instance" then
+                    local function public_keys(instance)
+                        instance.key = instance.key:sub(#prefix + 1)
+                        for _, child in pairs(instance.parts or {}) do public_keys(child) end
+                    end
+                    public_keys(result)
+                end
+                return result, reason
+            end
+        end
+
+        model.draw_many = function(instances, camera)
+            if type(instances) ~= "table" then error("draw_many expects an instance array", 2) end
+            local safe = {}
+            local copies = {}
+            for index, instance in ipairs(instances) do safe[index] = scoped_graph(instance, copies) end
+            return _model.draw_many(safe, camera)
+        end
+
+        model.screen_ray = function(...)
+            if stopped then error("model scope has stopped", 2) end
+            return _model.screen_ray(...)
+        end
+
+        model.raycast = function(instances, ray, max_distance)
+            if type(instances) ~= "table" then error("raycast expects an instance array", 2) end
+            local safe, copies, originals = {}, {}, {}
+            for index, instance in ipairs(instances) do safe[index] = scoped_graph(instance, copies) end
+            for original, copy in pairs(copies) do originals[copy] = original end
+            local hit, reason = _model.raycast(safe, ray, max_distance)
+            if hit then
+                hit.instance = originals[hit.instance]
+                hit.key = hit.instance.key
+            end
+            return hit, reason
+        end
+
+        model.get_bounds = function(opts)
+            if type(opts) == "string" then return _model.get_bounds(scoped_key(opts)) end
+            return _model.get_bounds(scoped_graph(opts))
+        end
+
+        model.get_animations = function(key)
+            return _model.get_animations(scoped_key(key))
+        end
+
+        for _, operation in ipairs({ "play", "update", "pause", "stop", "seek" }) do
+            local operation_name = operation
+            model[operation_name] = function(instance, value)
+                local copies = {}
+                local safe = scoped_graph(instance, copies)
+                local ok, reason = _model[operation_name](safe, value)
+                if ok then
+                    for original, copy in pairs(copies) do original.animation = copy.animation end
+                end
+                return ok, reason
+            end
+        end
+
+        model.attach = function(parent, name, child)
+            scoped_key(parent.key)
+            scoped_key(child.key)
+            return _model.attach(parent, name, child)
+        end
+
+        model.detach = function(parent, name)
+            scoped_key(parent.key)
+            return _model.detach(parent, name)
+        end
+
+        model.get_part = function(parent, name)
+            scoped_key(parent.key)
+            return _model.get_part(parent, name)
+        end
+
+        model.get_materials = function(key)
+            return _model.get_materials(scoped_key(key))
         end
 
         model.unload = function(key)
-            if owned[key] then
-                owned[key] = nil
-                _model.unload(key)
-            end
+            local private_key = scoped_key(key)
+            owned[key] = nil
+            return _model.unload(private_key)
         end
 
         mod.on_stop(function()
-            for key in pairs(owned) do
-                _model.unload(key)
-            end
+            if stopped then return end
+            for key in pairs(owned) do _model.unload(prefix .. key) end
+            owned = {}
+            stopped = true
         end)
 
         api.model = model

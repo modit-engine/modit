@@ -26,19 +26,19 @@ local m = {}
 
 --- Builds a water mesh from flat x, y, z triangle vertices
 --- @param vertices table Flat list: x, y, z per vertex
---- @return cdata model Model object
+--- @return table model Backend-owned model asset
 function m.build(vertices)
     return _model.build(vertices)
 end
 
 --- Releases a water mesh
---- @param model cdata Model object
+--- @param model table Backend-owned model asset
 function m.free(model)
     _model.free(model)
 end
 
 --- Draws the water mesh. Does nothing outside a lit 3D pass
---- @param model cdata Model object
+--- @param model table Backend-owned model asset
 --- @param x number Position X
 --- @param y number Water level
 --- @param z number Position Z
@@ -51,17 +51,24 @@ end
 --- @param b number Water blue (0-1)
 --- @param opacity number Base opacity (0-1)
 function m.draw(model, x, y, z, time, amplitude, frequency, speed, r, g, b, opacity)
+    if not model or not model.native then return end
     local shader = _lighting.water_shader()
     if not shader then return end
 
     _lighting.set_water(time, amplitude, frequency, speed, r, g, b, opacity)
 
-    for index = 0, model.materialCount - 1 do
-        model.materials[index].shader = shader
+    local native_model = model.native
+    for index = 0, native_model.materialCount - 1 do
+        model.saved_shaders[index] = native_model.materials[index].shader
+        native_model.materials[index].shader = shader
     end
 
     position_vec.x, position_vec.y, position_vec.z = x, y, z
-    _lib.DrawModelEx(model, position_vec, axis_vec, 0, scale_vec, tint)
+    local ok, reason = pcall(_lib.DrawModelEx, native_model, position_vec, axis_vec, 0, scale_vec, tint)
+    for index = 0, native_model.materialCount - 1 do
+        native_model.materials[index].shader = model.saved_shaders[index]
+    end
+    if not ok then error(reason, 0) end
 end
 
 return m

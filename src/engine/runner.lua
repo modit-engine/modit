@@ -351,6 +351,8 @@ end
 --- @section Boot
 
 local engine = require("src.engine")
+engine.config = conf
+engine.game_dir = GAME_DIR
 _G[GLOBAL_NAME] = engine
 engine.log.sink = emit
 
