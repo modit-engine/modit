@@ -1,3 +1,13 @@
+# v0.8.0
+
+Shadows & Water
+
+- Added support for shadows; blob/projected/mapped pretty basic implementation but its there.
+- Added water module same as above basic but exists, using a sinewave vertex shader.
+
+Notes:
+- Project will go public as soon as possible potentially after physics? 
+
 # v0.7.0
 
 Lighting & Sky.
@@ -5,6 +15,9 @@ Lighting & Sky.
 - Moved render modules inside engine into `/modules/render`
 - Added basic `modules/render/lighting` & `/sky` modules nothing amazing mostly a copy of raylib examples
 - Client build fixes pushed by sayer
+
+Notes:
+- Project will go public as soon as possible, once the API is a little more feature filled and documented. 
 
 # v0.6.0
 

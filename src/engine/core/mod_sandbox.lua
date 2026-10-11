@@ -40,8 +40,11 @@ local AUDIO = {
     "set_music_volume", "set_music_pitch", "is_music_playing",
 }
 local IMAGE = { "get_size", "draw", "draw_frame", "draw_sprite" }
-local LIGHTING = { "set_sun", "set_ambient", "set_fog" }
+local LIGHTING = { "set_sun", "set_ambient", "set_fog", "set_shadows", "shadow_pass", "shadow_map_pass", "blob" }
 local SKY = { "set", "draw" }
+local MODEL = { "draw" }
+local FONT = { "draw", "measure", "width" }
+local WATER = { "set", "set_enabled", "draw", "height_at" }
 
 --- @section Initialisation
 
@@ -101,6 +104,8 @@ local function load_client_modules()
         audio = require("src.engine.modules.audio"),
         lighting = require("src.engine.modules.render.lighting"),
         sky = require("src.engine.modules.render.sky"),
+        font = require("src.engine.modules.render.font"),
+        water = require("src.engine.modules.render.water"),
     }
 end
 
@@ -191,6 +196,8 @@ local function build_client(mod, modules)
     local _audio = client.audio
     local _lighting = client.lighting
     local _sky = client.sky
+    local _font = client.font
+    local _water = client.water
 
     local api = build_shared(mod, RESERVED.client, modules)
 
@@ -274,6 +281,78 @@ local function build_client(mod, modules)
         mod.on_stop(function()
             _sky.reset()
         end)
+    end
+
+    if modules.water then
+        api.water = pick(_water, WATER)
+
+        mod.on_stop(function()
+            _water.reset()
+        end)
+    end
+
+    if modules.font then
+        local font = pick(_font, FONT)
+        font.get = function(size, path)
+            if path then
+                return _font.get(size, resolve(path))
+            else
+                return _font.get(size)
+            end
+        end
+        api.font = font
+    end
+
+    if modules.model then
+        local engine = assert(rawget(_G, "engine"), "engine namespace is not initialized")
+        local _model = assert(engine.model, "engine.model is unavailable")
+        local model = pick(_model, MODEL)
+        local owned = {}
+
+        model.load = function(opts)
+            if type(opts) ~= "table" then
+                error("model.load expects a table", 2)
+            end
+
+            local safe = {}
+            for key, value in pairs(opts) do
+                safe[key] = value
+            end
+            safe.path = resolve(opts.path)
+
+            local ok = _model.load(safe)
+            if ok then
+                owned[opts.key] = true
+            end
+            return ok
+        end
+
+        model.build = function(opts)
+            if type(opts) ~= "table" then
+                error("model.build expects a table", 2)
+            end
+
+            local ok = _model.build(opts)
+            if ok then
+                owned[opts.key] = true
+            end
+            return ok
+        end
+
+        model.unload = function(key)
+            if owned[key] then
+                owned[key] = nil
+                _model.unload(key)
+            end
+        end
+
+        mod.on_stop(function()
+            for key in pairs(owned) do
+                _model.unload(key)
+            end
+        end)
+
+        api.model = model
     end
 
     if modules.image then

@@ -29,13 +29,15 @@ return {
     mods = require("src.engine.modules.mods"),
     network = require("src.engine.modules.network"),
 
-    --- Render 
+    --- Render
     draw = _render.draw,
     draw3d = _render.draw3d,
     font = _render.font,
     image = _render.image,
     lighting = _render.lighting,
     sky = _render.sky,
+    model = _render.model,
+    water = require("src.engine.modules.render.water"),
 
     --- Input
     actions = _input.actions,
