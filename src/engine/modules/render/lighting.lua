@@ -245,6 +245,7 @@ end
 
 --- Restores the default lighting, fog and shadows
 function m.reset()
+    _backend.set_local_lights({}, {})
     local d = DEFAULTS
     sun_dir[1], sun_dir[2], sun_dir[3] = normalise(d.sun_dir[1], d.sun_dir[2], d.sun_dir[3])
     sun_colour[1], sun_colour[2], sun_colour[3] = d.sun_colour[1], d.sun_colour[2], d.sun_colour[3]
@@ -252,6 +253,45 @@ function m.reset()
     fog_near, fog_far, fog_colour = d.fog_near, d.fog_far, nil
     shadow_mode, shadow_strength, shadow_range = d.shadow_mode, d.shadow_strength, d.shadow_range
     map_ready = false
+end
+
+--- Sets up to eight world-space area lights and 32 box shadow casters.
+--- Call outside a draw pass; pass empty tables to clear lights between scenes.
+--- @param lights table Array of {x,y,z,radius,r,g,b,strength}; RGB is 0..255.
+--- @param blockers table Array of {min_x,min_y,min_z,max_x,max_y,max_z}.
+--- Shadows have soft approximate edges and follow box bounds, not mesh silhouettes.
+function m.set_local_lights(lights, blockers)
+    if type(lights or {}) ~= "table" or type(blockers or {}) ~= "table" then
+        return false, "local lights and blockers must be tables"
+    end
+    local sources, boxes = {}, {}
+    for group, entries in ipairs({ lights or {}, blockers or {} }) do
+        local fields = group == 1 and { "x", "y", "z", "radius", "r", "g", "b", "strength" }
+            or { "min_x", "min_y", "min_z", "max_x", "max_y", "max_z" }
+        for index = 1, math.min(#entries, group == 1 and 8 or 32) do
+            local source, copy = entries[index], {}
+            if type(source) ~= "table" then return false, "invalid local lighting entry" end
+            for _, field in ipairs(fields) do
+                local value = source[field]
+                if type(value) ~= "number" or value ~= value or math.abs(value) == math.huge then
+                    return false, "invalid local lighting " .. field
+                end
+                copy[field] = value
+            end
+            if group == 1 then
+                if copy.radius <= 0 or copy.strength < 0 then return false, "invalid local light radius or strength" end
+                for _, channel in ipairs({ "r", "g", "b" }) do copy[channel] = math.max(0, math.min(255, copy[channel])) end
+                sources[index] = copy
+            else
+                if copy.min_x > copy.max_x or copy.min_y > copy.max_y or copy.min_z > copy.max_z then
+                    return false, "invalid local light blocker bounds"
+                end
+                boxes[index] = copy
+            end
+        end
+    end
+    _backend.set_local_lights(sources, boxes)
+    return true
 end
 
 --- Binds the lit shader for the camera. Called by camera:begin_3d

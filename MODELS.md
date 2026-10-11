@@ -310,3 +310,17 @@ python tools/tests/model_export.py
 The format test expects `guy.iqm`, `guyanim.iqm`, `guytex.png`, `cesium_man.m3d` and `greenman.glb` in one fixture folder. Obtain them from the [Raylib example models](https://github.com/raysan5/raylib/tree/master/examples/models/resources/models), under `iqm`, `m3d` and `gltf`. These artist-authored characters passed 745 checks covering independent animation, posed bounds, rendering and cleanup. The fixtures are optional and are not bundled with this repository.
 
 The export test requires the normal Windows build tools. It creates a disposable project, builds both source and bytecode exports, launches each hidden executable from another working directory, and verifies embedded Lua descriptions, loose native assets, rendering and picking. Both variants passed. It does not build or modify an existing game.
+
+## Local area lights
+
+`engine.lighting.set_local_lights(lights, blockers)` supplies world-space lighting to both primitives and models. Call before the 3D pass. It returns `true`, or `false, reason` for invalid data; failed updates leave the previous lighting intact.
+
+```lua
+engine.lighting.set_local_lights({
+    { x = 0, y = 3, z = 0, radius = 12, r = 255, g = 230, b = 190, strength = 2 },
+}, {
+    { min_x = 2, min_y = 0, min_z = -1, max_x = 4, max_y = 2, max_z = 1 },
+})
+```
+
+Lights face downward, fade smoothly with distance, and use soft analytic box shadows. These are approximate building bounds, not per-voxel silhouettes or shadow maps. Each pass supports the first eight lights and 32 blockers; games should select nearby entries. Emission remains independent. Pass empty tables when changing scenes, or use `lighting.reset()` to restore defaults. Local lights currently affect opaque/translucent models and standard primitives, not the separate water shader.

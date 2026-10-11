@@ -29,9 +29,11 @@ uniform mat4 matView;
 out vec2 fragTexCoord;
 out vec4 fragColor;
 out vec3 viewPos;
+out vec3 worldPos;
 void main() {
     fragTexCoord = vertexTexCoord;
     fragColor = vertexColor;
+    worldPos = vertexPosition;
     viewPos = (matView * vec4(vertexPosition, 1.0)).xyz;
     gl_Position = mvp * vec4(vertexPosition, 1.0);
 }
@@ -51,20 +53,64 @@ uniform mat4 lightVP;
 out vec2 fragTexCoord;
 out vec4 fragColor;
 out vec3 viewPos;
+out vec3 worldPos;
 out vec3 viewNormal;
 out vec4 lightPos;
 void main() {
     viewNormal = mat3(matView) * mat3(matNormal) * vertexNormal;
     fragTexCoord = vertexTexCoord;
     fragColor = vertexColor;
+    worldPos = (matModel * vec4(vertexPosition, 1.0)).xyz;
     viewPos = (matView * matModel * vec4(vertexPosition, 1.0)).xyz;
     lightPos = lightVP * (matModel * vec4(vertexPosition, 1.0));
     gl_Position = mvp * vec4(vertexPosition, 1.0);
 }
 ]]
 
-local MESH_FRAGMENT = [[
-#version 330
+local LOCAL_LIGHTS = [[
+in vec3 worldPos;
+uniform vec4 localPositions[8];
+uniform vec4 localColours[8];
+uniform vec4 blockerMin[32];
+uniform vec4 blockerMax[32];
+uniform vec2 localCounts;
+// Analytic soft box shadows: conservative building bounds, not voxel silhouettes.
+float local_visibility(vec3 surface, vec3 source) {
+    vec3 ray = source - surface;
+    vec3 safeRay = mix(vec3(0.00001), ray, greaterThan(abs(ray), vec3(0.00001)));
+    float visibility = 1.0;
+    for (int index = 0; index < int(localCounts.y); index++) {
+        vec3 first = (blockerMin[index].xyz - surface) / safeRay;
+        vec3 last = (blockerMax[index].xyz - surface) / safeRay;
+        vec3 entry = min(first, last), exitPoint = max(first, last);
+        float nearPoint = max(max(entry.x, entry.y), entry.z);
+        float farPoint = min(min(exitPoint.x, exitPoint.y), exitPoint.z);
+        if (farPoint <= 0.002 || nearPoint >= 0.998) continue;
+        float softness = 0.075;
+        visibility *= smoothstep(-softness, softness, max(nearPoint, 0.002) - min(farPoint, 0.998));
+        if (visibility < 0.01) break;
+    }
+    return visibility;
+}
+vec3 local_illumination() {
+    vec3 normal = cross(dFdx(worldPos), dFdy(worldPos));
+    normal = length(normal) > 0.00001 ? normalize(normal) : vec3(0.0, 1.0, 0.0);
+    vec3 result = vec3(0.0);
+    for (int index = 0; index < int(localCounts.x); index++) {
+        vec3 delta = localPositions[index].xyz - worldPos;
+        float radius = localPositions[index].w;
+        float distanceToLight = length(delta);
+        if (distanceToLight >= radius || delta.y < -0.1) continue;
+        float falloff = 1.0 - smoothstep(0.0, radius, distanceToLight);
+        float diffuse = max(dot(normal, delta / max(distanceToLight, 0.001)), 0.0);
+        float visibility = local_visibility(worldPos + normal * 0.035, localPositions[index].xyz);
+        result += localColours[index].rgb * localColours[index].a * falloff * diffuse * visibility;
+    }
+    return result;
+}
+]]
+
+local MESH_FRAGMENT = "#version 330\n" .. LOCAL_LIGHTS .. [[
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 viewPos;
@@ -112,15 +158,14 @@ void main() {
             sun_vis = mix(1.0 - shadowParams.z, 1.0, vis / 9.0);
         }
     }
-    vec3 lit = base.rgb * min(ambient + sunColour * ndl * sun_vis, vec3(1.5));
+    vec3 lit = base.rgb * min(ambient + sunColour * ndl * sun_vis + local_illumination(), vec3(1.5));
     lit += emission.rgb * (emission.a > 0.5 ? texture(texture5, fragTexCoord).rgb : vec3(1.0));
     float fog = clamp((-viewPos.z - fogRange.x) / (fogRange.y - fogRange.x), 0.0, 1.0);
     finalColor = vec4(mix(lit, fogColour, fog), base.a);
 }
 ]]
 
-local FRAGMENT = [[
-#version 330
+local FRAGMENT = "#version 330\n" .. LOCAL_LIGHTS .. [[
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 viewPos;
@@ -137,7 +182,7 @@ void main() {
     vec3 c = cross(dFdx(viewPos), dFdy(viewPos));
     float len = length(c);
     float ndl = len > 1e-10 ? max(dot(c / len, -sunDir), 0.0) : 1.0;
-    vec3 lit = base.rgb * min(ambient + sunColour * ndl, vec3(1.5));
+    vec3 lit = base.rgb * min(ambient + sunColour * ndl + local_illumination(), vec3(1.5));
     float fog = clamp((-viewPos.z - fogRange.x) / (fogRange.y - fogRange.x), 0.0, 1.0);
     finalColor = vec4(mix(lit, fogColour, fog), base.a);
 }
@@ -351,6 +396,7 @@ local matrix_floats = _ffi.cast("float*", matrix)
 local map_target = nil
 local map_size = 0
 
+local local_sources, local_blockers = {}, {}
 local active = false
 local in_shadow = false
 local in_map = false
@@ -404,6 +450,19 @@ local function ensure(program)
     for key, name in pairs(program.uniforms) do
         program.locs[key] = _lib.GetShaderLocation(loaded, name)
     end
+    if program == lit or program == lit_mesh then
+        program.local_positions, program.local_colours = {}, {}
+        program.blocker_min, program.blocker_max = {}, {}
+        program.local_counts = _lib.GetShaderLocation(loaded, "localCounts")
+        for index = 1, 8 do
+            program.local_positions[index] = _lib.GetShaderLocation(loaded, "localPositions[" .. (index - 1) .. "]")
+            program.local_colours[index] = _lib.GetShaderLocation(loaded, "localColours[" .. (index - 1) .. "]")
+        end
+        for index = 1, 32 do
+            program.blocker_min[index] = _lib.GetShaderLocation(loaded, "blockerMin[" .. (index - 1) .. "]")
+            program.blocker_max[index] = _lib.GetShaderLocation(loaded, "blockerMax[" .. (index - 1) .. "]")
+        end
+    end
     if program == lit_mesh then
         loaded.locs[20] = _lib.GetShaderLocation(loaded, "texture5") -- SHADER_LOC_MAP_EMISSION
     end
@@ -435,6 +494,26 @@ end
 
 --- @section Functions
 
+--- Uploads world-space local lights and soft box shadow casters for the current frame.
+local function upload_local_lights()
+    local lights, blockers = local_sources, local_blockers
+    for _, program in ipairs({ lit, lit_mesh }) do
+        if ensure(program) then
+            set_vec2(program, program.local_counts, math.min(#lights, 8), math.min(#blockers, 32))
+            for index = 1, math.min(#lights, 8) do
+                local light = lights[index]
+                set_vec4(program, program.local_positions[index], light.x, light.y, light.z, light.radius)
+                set_vec4(program, program.local_colours[index], light.r / 255, light.g / 255, light.b / 255, light.strength)
+            end
+            for index = 1, math.min(#blockers, 32) do
+                local box = blockers[index]
+                set_vec4(program, program.blocker_min[index], box.min_x, box.min_y, box.min_z, 0)
+                set_vec4(program, program.blocker_max[index], box.max_x, box.max_y, box.max_z, 0)
+            end
+        end
+    end
+end
+
 --- Uploads lighting parameters and binds the lit shader. Call right after begin_3d
 --- @param sdx number Sun direction X (view space, direction the light travels)
 --- @param sdy number Sun direction Y
@@ -462,6 +541,7 @@ local function begin(sdx, sdy, sdz, sr, sg, sb, ar, ag, ab, fog_near, fog_far, f
         upload_lit(water, sdx, sdy, sdz, sr, sg, sb, ar, ag, ab, fog_near, fog_far, fr, fg, fb)
     end
 
+    upload_local_lights()
     _lib.BeginShaderMode(lit.shader)
     active = true
     return true
@@ -640,6 +720,7 @@ local function free()
         map_target, map_size = nil, 0
     end
     active, in_shadow, in_map, receiving = false, false, false, false
+    local_sources, local_blockers = {}, {}
 end
 
 return {
@@ -648,6 +729,9 @@ return {
     shadow_begin = shadow_begin,
     shadow_end = shadow_end,
     mesh_shader = mesh_shader,
+    set_local_lights = function(lights, blockers)
+        local_sources, local_blockers = lights, blockers
+    end,
     set_model_material = set_model_material,
     is_shadow_pass = is_shadow_pass,
     water_shader = water_shader,
