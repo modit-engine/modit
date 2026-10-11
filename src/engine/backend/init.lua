@@ -28,6 +28,7 @@ return {
     image = _raylib.image,
     model = _raylib.model,
     water = _raylib.water,
+    post = _raylib.post,
 
     process = require("src.engine.backend.platform." .. PLATFORM .. ".process"),
     filesystem = require("src.engine.backend.platform." .. PLATFORM .. ".filesystem"),

@@ -17,7 +17,7 @@ local m = {}
 --- @param target_buffer table Buffer instance to save
 --- @return boolean ok True if save succeeded
 function m.save(target_buffer)
-    if target_buffer.image or target_buffer.audio then return true end
+    if target_buffer.image or target_buffer.audio or target_buffer.model then return true end
     if _buffer.save(target_buffer) then 
         return true 
     end
@@ -29,7 +29,7 @@ end
 --- @param target_buffer table Buffer instance to close
 function m.close_buffer(target_buffer)
     if target_buffer.asset then
-        local preview = target_buffer.audio and "audio" or "image"
+        local preview = target_buffer.model and "model" or (target_buffer.audio and "audio" or "image")
         require("src.editor.ui.panels." .. preview).release(target_buffer.asset)
     end
     for index, current_buffer in ipairs(_state.buffers) do

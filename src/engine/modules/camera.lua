@@ -4,6 +4,7 @@
 
 local _backend = require("src.engine.backend").camera
 local _lighting = require("src.engine.modules.render.lighting")
+local _shapes = require("src.engine.modules.render.shapes")
 
 local camera = {}
 camera.__index = camera
@@ -25,6 +26,7 @@ end
 function camera:begin_3d()
     local p, t, u = self.position, self.target, self.up
     _backend.begin_3d(p.x, p.y, p.z, t.x, t.y, t.z, u.x, u.y, u.z, self.fov)
+    _shapes.reset()
     _lighting.begin(self)
 end
 

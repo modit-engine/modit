@@ -5,8 +5,11 @@
 --- @section Imports
 
 local _backend = require("src.engine.backend").window
+local _post = require("src.engine.modules.render.post")
 
 --- @section Initialisation
+
+local close_requested = false
 
 local m = {
     title = "Modit",
@@ -21,6 +24,7 @@ local m = {
 --- Initializes display window and backend rendering context
 --- @param opts table|nil Configuration table containing window, fps, and module options
 function m.init(opts)
+    close_requested = false
     opts = opts or {}
     local w = opts.window or {}
 
@@ -44,13 +48,19 @@ end
 
 --- Finalizes frame render pass and swaps display buffers
 function m.end_draw()
+    _post.close_scene() -- never swap buffers while a post-processing scene is still open
     _backend.end_draw()
 end
 
 --- Checks whether user requested window close event
 --- @return boolean is_closing True if window close event was signaled
 function m.should_close()
-    return _backend.should_close()
+    return close_requested or _backend.should_close()
+end
+
+--- Requests a clean exit after the current frame; the runner still calls game.quit.
+function m.request_close()
+    close_requested = true
 end
 
 --- @section Flags & Display Modes
@@ -152,6 +162,11 @@ end
 
 --- Closes display window and destroys graphics context
 function m.close()
+    -- Drop public handles while their graphics context is still alive.
+    local water = package.loaded["src.engine.modules.render.water"]
+    if water then water.reset() end
+    local model = package.loaded["src.engine.modules.render.model"]
+    if model then model.cleanup() end
     _backend.close()
 end
 

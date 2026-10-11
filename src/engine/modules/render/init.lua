@@ -15,5 +15,8 @@ return {
     image = require(PATH .. ".image"),
     lighting = require(PATH .. ".lighting"),
     sky = require(PATH .. ".sky"),
-    model = require(PATH .. ".model")
+    model = require(PATH .. ".model"),
+    shapes = require(PATH .. ".shapes"),
+    water = require(PATH .. ".water"),
+    post = require(PATH .. ".post")
 }
