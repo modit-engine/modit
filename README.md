@@ -90,8 +90,6 @@ If not? Figure it out or offer up a sacrifice to the Lua compiler.
 
 Modit Engine is open-source software licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
 
-Copyright (c) 2026 Jordan Casey (CaseIRL).
-
 ### Third-Party Libraries & Tech
 
 * **[raylib](https://raylib.com)** (zlib License) - Copyright (c) 2013-2026 Ramon Santamaria (@raysan5)
