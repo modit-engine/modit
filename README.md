@@ -7,11 +7,9 @@
 ![Language](https://img.shields.io/badge/Language-LuaJIT-blue?style=flat-square&labelColor=0E0E0E)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square&labelColor=0E0E0E)
 
-<h4>Built by Jordan Casey (CaseIRL)</h4>
-
-<a href="https://caseirl.dev" style="text-decoration: none;"><img src="https://img.shields.io/badge/🌐_Website-caseirl.dev-4dcbc2?style=for-the-badge&logoColor=white" alt="Website" /></a>
-<a href="https://discord.gg/QQ7yarSE5U" style="text-decoration: none;"><img src="https://img.shields.io/badge/_Discord-/QQ7yarSE5U-4dcbc2?style=for-the-badge&logoColor=white" alt="Discord" /></a>
-<a href="https://ko-fi.com/case" style="text-decoration: none;"><img src="https://img.shields.io/badge/_Ko--fi-Support-4dcbc2?style=for-the-badge&logo=kofi&logoColor=white" alt="Ko-fi" /></a>
+<a href="https://modit.dev"><img src="https://img.shields.io/badge/🌐_Website-modit.dev-4dcbc2?style=for-the-badge&logoColor=white" alt="Website" /></a>
+<a href="https://discord.gg/QQ7yarSE5U"><img src="https://img.shields.io/badge/_Discord-Join-4dcbc2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" /></a>
+<a href="https://ko-fi.com/case"><img src="https://img.shields.io/badge/_Ko--fi-Support-4dcbc2?style=for-the-badge&logo=kofi&logoColor=white" alt="Ko-fi" /></a>
 
 ---
 
