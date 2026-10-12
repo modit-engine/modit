@@ -1,27 +1,44 @@
 # Modit Engine
 
-### A small-footprint, modding-first game engine built with LuaJIT and Raylib.
+### A small-footprint, code-first 2D/3D game engine built with LuaJIT & Raylib.
 
-![Status](https://img.shields.io/badge/Status-Alpha-e4ad29?style=flat-square\&labelColor=0E0E0E)
-![Platforms](https://img.shields.io/badge/Platforms-Windows-green?style=flat-square\&labelColor=0E0E0E)
-![Language](https://img.shields.io/badge/Language-LuaJIT-blue?style=flat-square\&labelColor=0E0E0E)
-![License](https://img.shields.io/badge/License-Apache--2.0-555?style=flat-square\&labelColor=0E0E0E)
+![Status](https://img.shields.io/badge/Status-Alpha-e4ad29?style=flat-square&labelColor=0E0E0E)
+![Platforms](https://img.shields.io/badge/Platforms-Windows-green?style=flat-square&labelColor=0E0E0E)
+![Language](https://img.shields.io/badge/Language-LuaJIT-blue?style=flat-square&labelColor=0E0E0E)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square&labelColor=0E0E0E)
 
-<h4>Built by Case (CaseIRL)</h4>
+<h4>Built by Jordan Casey (CaseIRL)</h4>
 
-<a href="https://caseirl.dev" style="text-decoration: none;"><img src="https://img.shields.io/badge/🌐_Website-caseirl.dev-4dcbc2?style=for-the-badge&logoColor=white" alt="Website" /></a><a href="https://discord.gg/KJeEEUtyeq" style="text-decoration: none;"><img src="https://img.shields.io/badge/_Discord-/KJeEEUtyeq-4dcbc2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" /></a><a href="https://ko-fi.com/case" style="text-decoration: none;"><img src="https://img.shields.io/badge/_Ko--fi-Support-4dcbc2?style=for-the-badge&logo=kofi&logoColor=white" alt="Ko-fi" /></a>
+<a href="https://caseirl.dev" style="text-decoration: none;"><img src="https://img.shields.io/badge/🌐_Website-caseirl.dev-4dcbc2?style=for-the-badge&logoColor=white" alt="Website" /></a>
+<a href="https://discord.gg/QQ7yarSE5U" style="text-decoration: none;"><img src="https://img.shields.io/badge/_Discord-/QQ7yarSE5U-4dcbc2?style=for-the-badge&logoColor=white" alt="Discord" /></a>
+<a href="https://ko-fi.com/case" style="text-decoration: none;"><img src="https://img.shields.io/badge/_Ko--fi-Support-4dcbc2?style=for-the-badge&logo=kofi&logoColor=white" alt="Ko-fi" /></a>
 
-## About
+---
 
-I've tried pretty much every Lua game engine and framework I've come across, and always ended up preferring the code-first ones. Coming from the FiveM modding scene, that workflow is more natural to me.
+## ⚡ About
 
-The problem is that once you start looking for native Lua engines with proper 3D support, the options get pretty slim.
+I've tried pretty much every Lua game engine and framework I've come across, and always ended up preferring the code-first workflow. Coming from the FiveM modding scene, writing scripts directly against lightweight APIs is second nature.
 
-So I'm building the minimal, code-first Lua 3D engine I wish existed.
+The problem? Once you start looking for native, high-performance Lua engines with real 3D capabilities, options get pretty slim.
 
-Modit is also being built with a much bigger game project in mind. I want the engine to be something I can actually use myself, which is why modding is part of the foundation rather than something I'm planning to bolt on later.
+So I'm building **Modit** - the minimal, code-first 2D/3D Lua engine I wish existed.
 
-## Getting Started
+Modit is engineered with extreme performance and modularity in mind. Instead of bolting modding or multiplayer on as an afterthought, sandboxed mod support and client/server architecture are baked directly into the engine's DNA.
+
+---
+
+## 🛠️ Feature Overview
+
+- [x] **Code-First Workflow:** Pure LuaJIT execution with low-overhead C-FFI bindings. No bulky editor overhead unless you want it.
+- [x] **2D & 3D Rendering Pipeline:** Built on top of Raylib - supporting 3D models, custom GLSL shaders, camera systems, lighting, and 2D sprite rendering.
+- [x] **Box3D Physics & Voxels:** Integrated 3D bounding boxes, collision detection, raycasting, dynamic physics, and voxel terrain support.
+- [x] **Sandboxed Modding Core:** Isolated environment execution allowing players and creators to load dynamic mods safely at runtime.
+- [x] **Client/Server & Headless Mode:** Built-in networking architecture with headless server support for dedicated game servers.
+- [x] **Audio & Input Management:** Direct input mapping for gamepads/keyboard/mouse and positional 3D spatial audio.
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -33,38 +50,50 @@ Modit is also being built with a much bigger game project in mind. I want the en
 
 ```bash
 # Clone the repository
-git clone https://github.com/CaseIRL/modit.git
-cd modit
+git clone https://github.com/modit-engine/modit.git
+cd modit-engine
 
-# Launch the Editor
+# Launch the Engine / Sandbox
 luajit src/main.lua
+
 ```
 
-## Contributions
+---
 
-Modit is open-source, but I'm not looking for contributions just yet.
+## 🤝 Contributions
 
-I'm still establishing the core around what I personally need for the game I want to build. Once that's in place, I'll be more open to outside contributions.
+Modit is open-source, but I'm not actively taking major pull requests just yet.
 
-Issues and experimentation are welcome.
+I'm currently solidifying the core architectural foundations around the commercial title I'm building with it. Once the baseline API stabilizes, outside contributions and extensions will be warmly welcomed!
 
-## Support
+In the meantime, feel free to open issues, report bugs, or experiment with the code.
 
-Something crash? 
-Sandbox sinking? 
-Window decided to become a black hole?
+---
 
-If I'm around, give me a shout. 
-If not? Figure it out or sacrifice a chicken and wait?
+## 💬 Support
 
-Support Hours: *Whenever I'm awake and not dealing with real life.*
+Something crash?
 
-## License & Credits
+Sandbox sinking?
 
-Modit is open-source software licensed under the [Apache 2.0 License](LICENSE).
+Window decided to turn into a black hole?
 
-### Third-Party Software
+If I'm around, give me a shout on [Discord](https://discord.gg/QQ7yarSE5U).
 
-- **[raylib](https://www.raylib.com)** (zlib License) - Copyright (c) 2013-2026 Ramon Santamaria (@raysan5)
-- **[LuaJIT](https://luajit.org)** (MIT License) - Copyright (c) 2005-2026 Mike Pall
+If not? Figure it out or offer up a sacrifice to the Lua compiler.
 
+**Support Hours:** *Whenever I'm awake and not dealing with real life.*
+
+---
+
+## 📄 License & Credits
+
+Modit Engine is open-source software licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+
+Copyright (c) 2026 Jordan Casey (CaseIRL).
+
+### Third-Party Libraries & Tech
+
+* **[raylib](https://raylib.com)** (zlib License) - Copyright (c) 2013-2026 Ramon Santamaria (@raysan5)
+* **[LuaJIT](https://luajit.org)** (MIT License) - Copyright (c) 2005-2026 Mike Pall
+* **[Box3D](https://box2d.org)** (MIT License) - Copyright (c) 2026 Erin Catto
