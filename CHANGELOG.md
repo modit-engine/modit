@@ -1,3 +1,16 @@
+# v0.10.0
+
+API Cleanup & Documentation.
+
+- Game and mod files api now goes through `modit.` namespace instead of `engine.` for game files and flattened for mods. 
+- Added internal `docs/` folder with a `api-cheatsheet.md` to give a quick reference to all API accessible.
+- Engine module files moved around now all in own categorised sub folders, will help with organsation later.
+- Fixed an issue with editor modal not deleting files/folders from explorer.
+
+Notes:
+- Modit is still in alpha stages. The API is subject to change, and backward compatibility is not guaranteed at this stage. Please design and develop with this in mind.
+- Editor still needs some additions; drag to scroll, right click to close all files etc.
+
 # v0.9.0
 
 Physics & Box3D Integration.

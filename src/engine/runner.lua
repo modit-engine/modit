@@ -6,7 +6,7 @@
 
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
-local GLOBAL_NAME = "engine"
+local GLOBAL_NAME = "modit"
 
 -- Set by the launcher stub of a built game. Nil when running from source
 local BUNDLE = rawget(_G, "MODIT_BUNDLE")
@@ -222,7 +222,7 @@ local function build_headless_engine()
 
     if not ok then
         local reason = tostring(builtin_commands)
-        _log.error(("engine.builtin_commands failed to load:\n%s"):format(reason))
+        _log.error(("%s.builtin_commands failed to load:\n%s"):format(GLOBAL_NAME, reason))
         error(("Failed to load required headless module 'src.engine.core.builtin_commands':\n%s"):format(reason), 0)
     end
 

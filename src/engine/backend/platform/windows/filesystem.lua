@@ -52,10 +52,17 @@ local find_data_buffer = _ffi.new("WIN32_FIND_DATAA")
 --- @return boolean is_safe True if path is safe for filesystem operations
 local function is_safe_path(path)
     if type(path) ~= "string" or path == "" or path == "." then return false end
-    if path:match("^[/\\]+(") or path:match("^%a:[/\\]*)") then return false end
+    
+    local normalized = path:gsub("\\", "/")
+
+    if normalized:match("^[a-zA-Z]:[/\\]?%s*$") or normalized:match("^[/\\]+%s*$") then
+        return false
+    end
+
     for part in path:gmatch("[^/\\]+") do
         if part == ".." then return false end
     end
+
     return true
 end
 

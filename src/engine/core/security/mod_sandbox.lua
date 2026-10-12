@@ -206,9 +206,7 @@ local function build_shared(mod, reserved, modules)
                 _hooks.fire(name, ...)
             end,
         },
-
-        exports = _exports.api(mod.name),
-
+        
         commands = {
             register = function(name, fn, help)
                 _commands.register(name, fn, help, mod.name)
@@ -510,8 +508,8 @@ local function build_client(mod, modules)
     end
 
     if modules.model then
-        local engine = assert(rawget(_G, "engine"), "engine namespace is not initialized")
-        local _model = assert(engine.model, "engine.model is unavailable")
+        local modit = assert(rawget(_G, "modit"), "modit namespace is not initialized")
+        local _model = assert(modit.model, "modit.model is unavailable")
         local model = {}
         local owned = {}
         local stopped = false
@@ -660,8 +658,8 @@ local function build_client(mod, modules)
     end
 
     if modules.image then
-        local engine = assert(rawget(_G, "engine"), "engine namespace is not initialized")
-        local _image = assert(engine.image, "engine.image is unavailable")
+        local modit = assert(rawget(_G, "modit"), "modit namespace is not initialized")
+        local _image = assert(modit.image, "modit.image is unavailable")
         local image = pick(_image, IMAGE)
         local loaded = {}
 

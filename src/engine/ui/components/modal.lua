@@ -6,12 +6,13 @@
 
 --- Engine
 local _draw = require("src.engine.modules.render.draw")
-local keyboard = require("src.engine.modules.input.keyboard")
+local _keyboard = require("src.engine.modules.input.keyboard")
 
 --- Editor
 local _input = require("src.engine.ui.modules.input")
 local _theme = require("src.engine.ui.modules.theme")
 local _button = require("src.engine.ui.components.button")
+local _label = require("src.engine.ui.components.label")
 
 --- @section Constants
 
@@ -132,7 +133,7 @@ function m.draw(w, h)
     end
 
     if d.error then
-        _input.label(d.error, dx + PAD, y + 8, 16, t.accent3)
+        _label(d.error, dx + PAD, y + 8, 16, t.accent3)
         y = y + 24
     end
 
@@ -146,7 +147,7 @@ function m.draw(w, h)
 
     if confirmed or submitted then
         confirm(d)
-    elseif cancelled or keyboard.pressed("escape") then
+    elseif cancelled or _keyboard.pressed("escape") then
         cancel(d)
     end
 end

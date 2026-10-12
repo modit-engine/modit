@@ -8,6 +8,7 @@ local _log = require("src.engine.core.log")
 local _fs = require("src.engine.backend.platform." .. require("ffi").os:lower() .. ".filesystem")
 local _sandbox = require("src.engine.core.security.mod_sandbox")
 local _commands = require("src.engine.modules.commands")
+local _exports = require("src.engine.modules.modding.exports")
 
 --- @section Constants
 
@@ -152,14 +153,14 @@ local function make_env(mod)
         name = mod.name,
         realm = mod.realm,
         persist = mod.persist,
-        dir = m.root .. "/" .. mod.name,   -- add this
+        dir = m.root .. "/" .. mod.name,
         on_stop = function(callback) mod.stop_handlers[#mod.stop_handlers + 1] = callback end,
     }
     env.mod = handle
+    env.exports = _exports.api(mod.name)
 
-    for key, value in pairs(_sandbox.build(handle, m.config.modules or {})) do
-        env[key] = value
-    end
+    env.modit = _sandbox.build(handle, m.config.modules or {})
+
     return env
 end
 
