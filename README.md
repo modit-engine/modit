@@ -56,6 +56,13 @@ luajit src/main.lua
 
 ```
 
+### ⚠️ A Note on Binaries & Assets (.dlls / .ttf)
+
+To make getting up and running straightforward without forcing everyone to compile dependencies from scratch right away, pre-compiled binaries (`.dll` files) and font assets (`.ttf`) are included in the repository for convenience.
+
+* **Don't trust pre-compiled binaries?** Totally fair. You can swap them out with your own compiled versions or replace the `.ttf` files with any custom fonts you prefer.
+* **Future plans:** These convenience binaries may be stripped out or managed via an automated dependency fetcher in a later stage of development.
+
 ---
 
 ## 🤝 Contributions
