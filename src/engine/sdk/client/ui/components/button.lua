@@ -1,11 +1,11 @@
---- @module button
---- @file src/editor/ui/components/button.lua
+--- @module ui.components.button
+--- @file src/engine/sdk/client/ui/components/button.lua
 --- @description Unified interactive button component supporting text, icons, custom radii, and styling.
 
 --- @section Imports
 
-local _draw = require("src.engine.sdk.client.draw")
-local _font = require("src.engine.sdk.client.font")
+local _draw = require("src.engine.sdk.client.render.draw2d")
+local _font = require("src.engine.sdk.client.render.font")
 local _theme = require("src.engine.sdk.client.ui.theme")
 local _input = require("src.engine.sdk.client.ui.input")
 local _icons = require("src.engine.sdk.client.ui.icons")

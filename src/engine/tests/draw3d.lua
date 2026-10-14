@@ -14,28 +14,26 @@ return function(modit)
     --- @section Draw Test
 
     local function draw_test()
-        local draw = modit.draw
+        -- Clear background using draw2d for UI/text pass
+        modit.draw2d.clear(22, 22, 22, 255)
 
-        -- Clear background
-        draw.clear(22, 22, 22, 255)
-
-        draw.set_colour(255, 255, 255, 255)
-        draw.text("3d drawing & camera test", 20, 20, 24)
+        modit.draw2d.set_colour(255, 255, 255, 255)
+        modit.draw2d.text("3d drawing & camera test", 20, 20, 24)
 
         -- Begin 3D Mode
         cam:begin_3d()
-            draw.set_colour(255, 255, 255, 255)
-            draw.grid(20, 1)
-            draw.line_3d(0, 0, 0, 0, 3, 0)
+            modit.draw3d.set_colour(255, 255, 255, 255)
+            modit.draw3d.grid(20, 1)
+            modit.draw3d.line(0, 0, 0, 0, 3, 0)
             
-            draw.cube(-3, 0.5, 0, 1, 1, 1)
-            draw.cube_wires(-1.5, 0.5, 0, 1, 1, 1)
+            modit.draw3d.cube(-3, 0.5, 0, 1, 1, 1)
+            modit.draw3d.cube_wires(-1.5, 0.5, 0, 1, 1, 1)
             
-            draw.plane(0, 0, 3, 2, 2)
+            modit.draw3d.plane(0, 0, 3, 2, 2)
             
-            draw.sphere(1.5, 0.5, 0, 0.5)
-            draw.sphere_wires(3, 0.5, 0, 0.5)
-            draw.sphere_wires(4.5, 0.5, 0) -- defaults
+            modit.draw3d.sphere(1.5, 0.5, 0, 0.5)
+            modit.draw3d.sphere_wires(3, 0.5, 0, 0.5)
+            modit.draw3d.sphere_wires(4.5, 0.5, 0) -- defaults
         cam:end_3d()
     end
 

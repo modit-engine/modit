@@ -11,11 +11,14 @@ local modit = require("src.engine")
 
 --- @section Constants
 
-local VERSION = "0.08.0-alpha"
+local VERSION = "0.10.0-alpha"
 
 --- @section Run
 
--- local lighting_test = require("src.engine.tests.lighting")(modit)
+-- local lighting_test = require("src.engine.tests.lighting")(modit) -- lighting: update + draw
+local water_test = require("src.engine.tests.water")(modit) -- water: update + draw
+local model_test = require("src.engine.tests.model")(modit) -- model: update + draw
+local physics3d_test = require("src.engine.tests.physics3d")(modit) -- model: update + draw
 
 modit.run({
     version = VERSION,
@@ -30,8 +33,12 @@ modit.run({
         flags = { maximized = true, resizable = true }
     },
 
-    --update = test_suite.update,
-    draw = require("src.engine.tests.maths")(modit)
+    modules = {
+        audio = true
+    },
+
+    update = physics3d_test.update,
+    draw = physics3d_test.draw,
 })
 
 --- @section Test files
@@ -44,3 +51,5 @@ modit.run({
 -- draw = require("src.engine.tests.postfx")(modit) -- postfx: options, scene size, shaders
 -- draw = require("src.engine.tests.lighting")(modit) -- lighting & sky: sun, ambient, fog, shadow modes, sky backdrop
 -- draw = require("src.engine.tests.maths")(modit) -- maths, geometry, vector, mat4
+-- draw = require("src.engine.tests.audio")(modit) -- audio: sounds, music, volume, pitch, unload safety
+-- draw = require("src.engine.tests.water")(modit) -- water: presets, toggle, reset, height_at

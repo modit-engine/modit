@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.sdk.client.draw")
+local _draw = require("src.engine.sdk.client.render.draw2d")
 local _input = require("src.engine.sdk.client.ui.input")
 local _theme = require("src.engine.sdk.client.ui.theme")
 
@@ -15,16 +15,16 @@ local drag_value = 0
 
 --- @section Component
 
---- Renders an interactive panel splitter handle and calculates updated panel dimension[cite: 15]
---- @param x number X screen coordinate[cite: 15]
---- @param y number Y screen coordinate[cite: 15]
---- @param w number Width in pixels[cite: 15]
---- @param h number Height in pixels[cite: 15]
---- @param axis string Drag axis orientation ("x" for horizontal, "y" for vertical)[cite: 15]
---- @param value number Current panel dimension value[cite: 15]
---- @param dir number Direction multiplier (1 for normal resize, -1 for inverted)[cite: 15]
---- @return number value Updated panel dimension value[cite: 15]
---- @return boolean dragging True if splitter is actively being dragged[cite: 15]
+--- Renders an interactive panel splitter handle and calculates updated panel dimension
+--- @param x number X screen coordinate
+--- @param y number Y screen coordinate
+--- @param w number Width in pixels
+--- @param h number Height in pixels
+--- @param axis string Drag axis orientation ("x" for horizontal, "y" for vertical)
+--- @param value number Current panel dimension value
+--- @param dir number Direction multiplier (1 for normal resize, -1 for inverted)
+--- @return number value Updated panel dimension value
+--- @return boolean dragging True if splitter is actively being dragged
 return function(x, y, w, h, axis, value, dir)
     local t = _theme.get()
     local id = _input.new_id()

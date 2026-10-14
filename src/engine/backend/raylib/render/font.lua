@@ -5,7 +5,7 @@
 --- @section Imports
 
 local _raylib = require("src.engine.backend.raylib.ffi")
-local _draw = require("src.engine.backend.raylib.render.draw")
+local _draw = require("src.engine.backend.raylib.render.draw2d")
 local _ffi, _lib = _raylib.ffi, _raylib.lib
 
 --- @section Types & State

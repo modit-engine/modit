@@ -22,13 +22,13 @@ return function(modit)
     --- @param x number X position
     --- @param y number Y position
     local function caption(str, x, y)
-        modit.draw.set_colour(160, 160, 180, 255)
-        modit.draw.text(str, x, y, 14)
+        modit.draw2d.set_colour(160, 160, 180, 255)
+        modit.draw2d.text(str, x, y, 14)
     end
 
     --- Exercises every 2D draw function, clipping, text measuring, OO custom fonts, images, sprites, and 2D camera
     local function draw_test()
-        local draw = modit.draw
+        local draw = modit.draw2d
 
         -- Lazy load assets on the first frame (guarantees a live OpenGL context)
         if not assets_loaded and modit.image then

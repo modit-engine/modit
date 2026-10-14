@@ -227,7 +227,7 @@ function m.read_vox(path, combine_colours)
     file:seek("set", 0)
     local source = file:read("*a")
     file:close()
-    return require("src.engine.modules.render.vox").decode(source, combine_colours)
+    return require("src.engine.core.internal.vox").decode(source, combine_colours)
 end
 
 --- @section Model Lifecycle

@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.sdk.client.draw")
+local _draw = require("src.engine.sdk.client.render.draw2d")
 local _input = require("src.engine.sdk.client.ui.input")
 local _theme = require("src.engine.sdk.client.ui.theme")
 
@@ -23,14 +23,14 @@ local m = {}
 
 --- @section Functions
 
---- Begins a scroll viewport clip area and updates scroll position based on mouse wheel input[cite: 14]
---- @param state table Scroll state object containing y offset ({ y = 0 })[cite: 14]
---- @param x number X screen coordinate[cite: 14]
---- @param y number Y screen coordinate[cite: 14]
---- @param w number Viewport width in pixels[cite: 14]
---- @param h number Viewport height in pixels[cite: 14]
---- @param content_h number Total height of scrollable inner content in pixels[cite: 14]
---- @return number max Maximum vertical scroll offset in pixels[cite: 14]
+--- Begins a scroll viewport clip area and updates scroll position based on mouse wheel input
+--- @param state table Scroll state object containing y offset ({ y = 0 })
+--- @param x number X screen coordinate
+--- @param y number Y screen coordinate
+--- @param w number Viewport width in pixels
+--- @param h number Viewport height in pixels
+--- @param content_h number Total height of scrollable inner content in pixels
+--- @return number max Maximum vertical scroll offset in pixels
 function m.begin(state, x, y, w, h, content_h)
     local max = math.max(0, content_h - h)
     local wheel = _input.wheel()
@@ -52,7 +52,7 @@ function m.begin(state, x, y, w, h, content_h)
     return max
 end
 
---- Closes active scroll viewport, renders scrollbar track and thumb if needed, and restores scissor rect[cite: 14]
+--- Closes active scroll viewport, renders scrollbar track and thumb if needed, and restores scissor rect
 function m.finish()
     local e = stack[depth]
     depth = depth - 1

@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.sdk.client.draw")
+local _draw = require("src.engine.sdk.client.render.draw2d")
 local _theme = require("src.engine.sdk.client.ui.theme")
 
 --- @section Component

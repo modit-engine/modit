@@ -4,8 +4,8 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.sdk.client.draw")
-local _font = require("src.engine.sdk.client.font")
+local _draw = require("src.engine.sdk.client.render.draw2d")
+local _font = require("src.engine.sdk.client.render.font")
 local _input = require("src.engine.sdk.client.ui.input")
 local _theme = require("src.engine.sdk.client.ui.theme")
 local _icons = require("src.engine.sdk.client.ui.icons")

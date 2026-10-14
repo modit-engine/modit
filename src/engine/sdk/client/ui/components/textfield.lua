@@ -4,22 +4,22 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.sdk.client.draw")
-local _keyboard = require("src.engine.sdk.client.keyboard")
+local _draw = require("src.engine.sdk.client.render.draw2d")
+local _keyboard = require("src.engine.sdk.client.input.keyboard")
 local _input = require("src.engine.sdk.client.ui.input")
 local _theme = require("src.engine.sdk.client.ui.theme")
 
 --- @section Component
 
---- Renders an interactive textfield input component and handles text editing state[cite: 16]
---- @param state table Input state object ({ text = string, max? = number })[cite: 16]
---- @param x number X screen coordinate[cite: 16]
---- @param y number Y screen coordinate[cite: 16]
---- @param w number Width in pixels[cite: 16]
---- @param h number Height in pixels[cite: 16]
---- @param filter string|nil Optional character filter pattern (e.g., "^[%w_%-]$")[cite: 16]
---- @param placeholder string|nil Optional placeholder string displayed when empty and unfocused[cite: 16]
---- @return boolean submitted True if the enter key was pressed while focused[cite: 16]
+--- Renders an interactive textfield input component and handles text editing state
+--- @param state table Input state object ({ text = string, max? = number })
+--- @param x number X screen coordinate
+--- @param y number Y screen coordinate
+--- @param w number Width in pixels
+--- @param h number Height in pixels
+--- @param filter string|nil Optional character filter pattern (e.g., "^[%w_%-]$")
+--- @param placeholder string|nil Optional placeholder string displayed when empty and unfocused
+--- @return boolean submitted True if the enter key was pressed while focused
 return function(state, x, y, w, h, filter, placeholder)
     local t = _theme.get()
 

@@ -4,8 +4,8 @@
 
 --- @section Imports
 
-local _draw = require("src.engine.sdk.client.draw")
-local _keyboard = require("src.engine.sdk.client.keyboard")
+local _draw = require("src.engine.sdk.client.render.draw2d")
+local _keyboard = require("src.engine.sdk.client.input.keyboard")
 local _input = require("src.engine.sdk.client.ui.input")
 local _theme = require("src.engine.sdk.client.ui.theme")
 local _button = require("src.engine.sdk.client.ui.components.button")

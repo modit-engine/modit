@@ -4,7 +4,7 @@
 
 local _raylib = require("src.engine.backend.raylib.ffi")
 local _ffi, _lib = _raylib.ffi, _raylib.lib
-local _draw = require("src.engine.backend.raylib.render.draw")
+local _draw = require("src.engine.backend.raylib.render.draw2d")
 
 local _Vector3, _Vector2 = _ffi.typeof("Vector3"), _ffi.typeof("Vector2")
 local pos_a, pos_b, size_vec = _Vector3(), _Vector3(), _Vector2()

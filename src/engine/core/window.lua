@@ -86,7 +86,7 @@ function m.close()
     local water = loaded("src.engine.modules.render.water")
     if water then water.reset() end
 
-    local model = loaded("src.engine.sdk.client.model")
+    local model = loaded("src.engine.sdk.client.render.model")
     if model then model.cleanup() end
 
     _backend.close()
