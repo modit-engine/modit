@@ -2,25 +2,56 @@
 --- @file src/engine/core/json.lua
 --- @description Lightweight dependency-free JSON encoder and decoder.
 
---- @section Module
+--- @section Constants
+
+local ENCODE_ESCAPES = {
+    ['"'] = '\\"',
+    ['\\'] = '\\\\',
+    ['\b'] = '\\b',
+    ['\f'] = '\\f',
+    ['\n'] = '\\n',
+    ['\r'] = '\\r',
+    ['\t'] = '\\t'
+}
+
+local DECODE_ESCAPES = {
+    ['"'] = '"',
+    ['\\'] = '\\',
+    ['/'] = '/',
+    ['b'] = '\b',
+    ['f'] = '\f',
+    ['n'] = '\n',
+    ['r'] = '\r',
+    ['t'] = '\t'
+}
+
+--- @section Initialisation
 
 local m = {}
+
+--- @section Helpers
+
+local function utf8_char(cp)
+    if cp < 0x80 then
+        return string.char(cp)
+    elseif cp < 0x800 then
+        return string.char(0xC0 + math.floor(cp / 64), 0x80 + cp % 64)
+    elseif cp < 0x10000 then
+        return string.char(0xE0 + math.floor(cp / 4096), 0x80 + math.floor(cp / 64) % 64, 0x80 + cp % 64)
+    end
+    return string.char(
+        0xF0 + math.floor(cp / 262144),
+        0x80 + math.floor(cp / 4096) % 64,
+        0x80 + math.floor(cp / 64) % 64,
+        0x80 + cp % 64
+    )
+end
 
 --- @section Encoder
 
 local function encode_string(value)
     return '"' .. value:gsub('[%z\1-\31\\"]', function(char)
-        local escapes = {
-            ['"'] = '\\"',
-            ['\\'] = '\\\\',
-            ['\b'] = '\\b',
-            ['\f'] = '\\f',
-            ['\n'] = '\\n',
-            ['\r'] = '\\r',
-            ['\t'] = '\\t'
-        }
-
-        return escapes[char] or ("\\u%04x"):format(char:byte())
+        return ENCODE_ESCAPES[char] or ("\\u%04x"):format(char:byte())
     end) .. '"'
 end
 
@@ -72,13 +103,6 @@ local function encode_value(value, seen)
     return "{" .. table.concat(result, ",") .. "}"
 end
 
---- Encodes a Lua value as JSON.
---- @param value any Value to encode.
---- @return string json Encoded JSON string.
-function m.encode(value)
-    return encode_value(value)
-end
-
 --- @section Decoder
 
 local function decode_error(input, index, message)
@@ -112,25 +136,27 @@ local function decode_value(input, index)
                 if index > length then decode_error(input, index, "unterminated string") end
 
                 local escape = input:sub(index, index)
-                local escapes = {
-                    ['"'] = '"',
-                    ['\\'] = '\\',
-                    ['/'] = '/',
-                    ['b'] = '\b',
-                    ['f'] = '\f',
-                    ['n'] = '\n',
-                    ['r'] = '\r',
-                    ['t'] = '\t'
-                }
 
-                if escapes[escape] then
-                    result[#result + 1] = escapes[escape]
+                if DECODE_ESCAPES[escape] then
+                    result[#result + 1] = DECODE_ESCAPES[escape]
                     index = index + 1
                 elseif escape == "u" then
                     local hex = input:sub(index + 1, index + 4)
                     if not hex:match("^%x%x%x%x$") then decode_error(input, index, "invalid unicode escape") end
-                    result[#result + 1] = utf8.char(tonumber(hex, 16))
+
+                    local cp = tonumber(hex, 16)
                     index = index + 5
+
+                    if cp >= 0xD800 and cp <= 0xDBFF and input:sub(index, index + 1) == "\\u" then
+                        local low_hex = input:sub(index + 2, index + 5)
+                        local low = low_hex:match("^%x%x%x%x$") and tonumber(low_hex, 16)
+                        if low and low >= 0xDC00 and low <= 0xDFFF then
+                            cp = 0x10000 + (cp - 0xD800) * 0x400 + (low - 0xDC00)
+                            index = index + 6
+                        end
+                    end
+
+                    result[#result + 1] = utf8_char(cp)
                 else
                     decode_error(input, index, "invalid escape sequence")
                 end
@@ -144,17 +170,9 @@ local function decode_value(input, index)
         decode_error(input, index, "unterminated string")
     end
 
-    local literals = {
-        ["true"] = true,
-        ["false"] = false,
-        ["null"] = nil
-    }
-
-    for literal, value in pairs(literals) do
-        if input:sub(index, index + #literal - 1) == literal then
-            return value, index + #literal
-        end
-    end
+    if input:sub(index, index + 3) == "true" then return true, index + 4 end
+    if input:sub(index, index + 4) == "false" then return false, index + 5 end
+    if input:sub(index, index + 3) == "null" then return nil, index + 4 end
 
     if char == "[" then
         local result = {}
@@ -214,6 +232,15 @@ local function decode_value(input, index)
     end
 
     decode_error(input, index, "unexpected character '" .. char .. "'")
+end
+
+--- @section Methods
+
+--- Encodes a Lua value as JSON.
+--- @param value any Value to encode.
+--- @return string json Encoded JSON string.
+function m.encode(value)
+    return encode_value(value)
 end
 
 --- Decodes a JSON string into a Lua value.

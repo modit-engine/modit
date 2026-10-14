@@ -91,6 +91,8 @@ local function serialize(value)
     return type(value) == "table" and table_to_string(value) or tostring(value)
 end
 
+--- @section Functions
+
 --- Sets minimum log level threshold for output filtering
 --- @param level string Target minimum log level ("debug", "info", "success", "warn", "error", "fatal")
 function m.set_level(level)

@@ -1,5 +1,5 @@
 --- @file src/main.lua
---- @description Main initialisation file
+--- @description Entry point. Opens the window and runs the draw test.
 
 --- @section Package Path
 
@@ -7,35 +7,40 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 --- @section Imports
 
-local engine = require("src.engine")
-local editor = require("src.editor")
-local conf = require("src.editor.core.config")
-local version_check = require("src.engine.core.version_check")
-local version = require("src.version")
-local window, draw = engine.window, engine.draw
-local input = require("src.engine.ui.modules.input")
+local modit = require("src.engine")
 
---- @section Initialisation
+--- @section Constants
 
-version_check.check(version)
+local VERSION = "0.08.0-alpha"
 
-window.init(conf)
-editor.init()
-if arg[1] then editor.open_project(arg[1]) end
+--- @section Run
 
---- @section Main Loop
+-- local lighting_test = require("src.engine.tests.lighting")(modit)
 
-while not window.should_close() do
-    editor.update(window.get_dt())
+modit.run({
+    version = VERSION,
+    check_updates = true,
 
-    window.begin_draw()
-    draw.set_colour(255, 255, 255, 255)
-    input.begin_frame()
-    editor.draw()
-    input.end_frame()
-    draw.reset_clip()
-    window.end_draw()
-end
+    window = {
+        title = "Modit Engine - V" .. VERSION,
+        icon = "src/engine/assets/branding/modit_icon_32x32.png",
+        console = false,
+        size = { width = 1600, height = 900 },
+        fps = { draw = false, target = false },
+        flags = { maximized = true, resizable = true }
+    },
 
-editor.close()
-window.close()
+    --update = test_suite.update,
+    draw = require("src.engine.tests.maths")(modit)
+})
+
+--- @section Test files
+--- @todo remove
+
+-- draw = require("src.engine.tests.draw2d")(modit) -- draw & camera: 2d drawing + cam + font + images
+-- draw = require("src.engine.tests.draw3d")(modit) -- draw & camera:3d drawing + cam
+-- draw = require("src.engine.tests.commands_hooks")(modit) -- commands & hooks: commands + hooks
+-- draw = require("src.engine.tests.canvas")(modit) -- canvas: minimap + fixed res + mouse mapping
+-- draw = require("src.engine.tests.postfx")(modit) -- postfx: options, scene size, shaders
+-- draw = require("src.engine.tests.lighting")(modit) -- lighting & sky: sun, ambient, fog, shadow modes, sky backdrop
+-- draw = require("src.engine.tests.maths")(modit) -- maths, geometry, vector, mat4

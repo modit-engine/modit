@@ -148,10 +148,10 @@ function m.get(url, headers)
     if not user_agent or not host or not path or not verb then return nil, nil, "failed to create request strings" end
 
     local session = _winhttp.WinHttpOpen(user_agent, WINHTTP_ACCESS_TYPE_NO_PROXY, nil, nil, 0)
-    if not session then return nil, nil, "WinHttpOpen failed: " .. _winhttp.GetLastError() end
+    if session == nil then return nil, nil, "WinHttpOpen failed: " .. _winhttp.GetLastError() end
 
     local connection = _winhttp.WinHttpConnect(session, host, parsed.port, 0)
-    if not connection then
+    if connection == nil then
         local error_code = _winhttp.GetLastError()
         close(session)
         return nil, nil, "WinHttpConnect failed: " .. error_code
@@ -160,7 +160,7 @@ function m.get(url, headers)
     local flags = parsed.scheme == "https" and WINHTTP_FLAG_SECURE or 0
     local request = _winhttp.WinHttpOpenRequest(connection, verb, path, nil, nil, nil, flags)
 
-    if not request then
+    if request == nil then
         local error_code = _winhttp.GetLastError()
         close(connection)
         close(session)

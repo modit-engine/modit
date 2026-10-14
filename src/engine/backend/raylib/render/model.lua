@@ -6,7 +6,7 @@
 
 local _raylib = require("src.engine.backend.raylib.ffi")
 local _ffi, _lib, _Color = _raylib.ffi, _raylib.lib, _raylib.Color
-local _mat4 = require("src.engine.modules.maths.mat4")
+local _mat4 = require("src.engine.sdk.shared.mat4")
 local _json = require("src.engine.core.json")
 local _lighting = require("src.engine.backend.raylib.render.lighting")
 

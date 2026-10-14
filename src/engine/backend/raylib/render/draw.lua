@@ -137,7 +137,10 @@ end
 --- @param x3 number Point 3 X
 --- @param y3 number Point 3 Y
 function m.triangle(x1, y1, x2, y2, x3, y3)
-    pos_vec1.x, pos_vec1.y, pos_vec2.x, pos_vec2.y, pos_vec3.x, pos_vec3.y = x1, y1, x2, y2, x3, y3
+    -- Swapping 2 and 3 forces counter-clockwise winding order for raylib
+    pos_vec1.x, pos_vec1.y = x1, y1
+    pos_vec2.x, pos_vec2.y = x3, y3
+    pos_vec3.x, pos_vec3.y = x2, y2
     _lib.DrawTriangle(pos_vec1, pos_vec2, pos_vec3, active_color)
 end
 

@@ -1392,9 +1392,15 @@ void rlEnableBackfaceCulling(void);
 
 --- @section Library Binding Loading
 
-local ok, raylib_lib = pcall(_ffi.load, "vendor/raylib/lib/raylib")
+local VENDOR_DIR = "vendor/windows/"
+
+local ok, raylib_lib = pcall(_ffi.load, VENDOR_DIR .. "raylib")
 if not ok then
-    raylib_lib = _ffi.load("raylib")
+    local first_err = raylib_lib
+    ok, raylib_lib = pcall(_ffi.load, "raylib")
+    if not ok then
+        error("raylib failed to load:\n" .. tostring(first_err) .. "\n" .. tostring(raylib_lib), 0)
+    end
 end
 
 return {

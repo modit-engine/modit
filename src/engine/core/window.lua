@@ -5,7 +5,10 @@
 --- @section Imports
 
 local _backend = require("src.engine.backend").window
-local _post = require("src.engine.modules.render.post")
+
+--- @section Constants
+
+local FPS_X, FPS_Y = 10, 10
 
 --- @section Initialisation
 
@@ -15,30 +18,39 @@ local m = {
     title = "Modit",
     size = { width = 1280, height = 720 },
     fps = { draw = false, target = false },
-    audio = false,
     icon = nil,
     flags = {},
     background = { 10, 10, 20, 255 },
 }
 
---- Initializes display window and backend rendering context
---- @param opts table|nil Configuration table containing window, fps, and module options
-function m.init(opts)
-    close_requested = false
-    opts = opts or {}
-    local w = opts.window or {}
+--- @section Helpers
 
-    m.title = w.title or m.title
-    m.size = w.size or m.size
-    m.flags = w.flags or m.flags
-    m.icon = w.icon or m.icon
-    m.fps = opts.fps or m.fps
-    m.audio = opts.modules and opts.modules.audio or m.audio
-
-    _backend.init(m.title, m.size.width, m.size.height, m.flags, m.icon, m.audio, m.fps.target)
+--- Gets a loaded module without requiring it, so the window has no hard dependency on it
+--- @param name string Module path
+--- @return table|nil module Loaded module or nil
+local function loaded(name)
+    return package.loaded[name]
 end
 
---- @section Render Pass & Lifecycle
+--- @section Lifecycle
+
+--- Initializes display window and backend rendering context
+--- @param opts table|nil { title, icon, size = { width, height }, fps = { draw, target }, flags = {} }
+--- @param modules table|nil Module toggles from the game config, e.g. { audio = true }
+function m.init(opts, modules)
+    close_requested = false
+    opts = opts or {}
+
+    m.title = opts.title or m.title
+    m.size = opts.size or m.size
+    m.fps = opts.fps or m.fps
+    m.flags = opts.flags or m.flags
+    m.icon = opts.icon or m.icon
+
+    local audio = modules and modules.audio or false
+
+    _backend.init(m.title, m.size.width, m.size.height, m.flags, m.icon, audio, m.fps.target)
+end
 
 --- Begins frame render pass and clears background color
 function m.begin_draw()
@@ -48,7 +60,12 @@ end
 
 --- Finalizes frame render pass and swaps display buffers
 function m.end_draw()
-    _post.close_scene() -- never swap buffers while a post-processing scene is still open
+    -- never swap buffers while a post-processing scene is still open
+    local post = loaded("src.engine.modules.render.post")
+    if post then post.close_scene() end
+
+    if m.fps.draw then _backend.draw_fps(FPS_X, FPS_Y) end
+
     _backend.end_draw()
 end
 
@@ -58,9 +75,21 @@ function m.should_close()
     return close_requested or _backend.should_close()
 end
 
---- Requests a clean exit after the current frame; the runner still calls game.quit.
+--- Requests a clean exit after the current frame
 function m.request_close()
     close_requested = true
+end
+
+--- Closes display window and destroys graphics context
+function m.close()
+    -- Drop public handles while their graphics context is still alive.
+    local water = loaded("src.engine.modules.render.water")
+    if water then water.reset() end
+
+    local model = loaded("src.engine.sdk.client.model")
+    if model then model.cleanup() end
+
+    _backend.close()
 end
 
 --- @section Flags & Display Modes
@@ -134,13 +163,6 @@ function m.get_fps()
     return _backend.get_fps()
 end
 
---- Renders FPS counter overlay at specified screen position
---- @param x number Screen X position
---- @param y number Screen Y position
-function m.draw_fps(x, y)
-    _backend.draw_fps(x, y)
-end
-
 --- Retrieves current desktop position of window
 --- @return number x Screen X position
 --- @return number y Screen Y position
@@ -158,16 +180,6 @@ end
 --- Minimizes window to OS taskbar
 function m.minimize()
     _backend.minimize()
-end
-
---- Closes display window and destroys graphics context
-function m.close()
-    -- Drop public handles while their graphics context is still alive.
-    local water = package.loaded["src.engine.modules.render.water"]
-    if water then water.reset() end
-    local model = package.loaded["src.engine.modules.render.model"]
-    if model then model.cleanup() end
-    _backend.close()
 end
 
 return m

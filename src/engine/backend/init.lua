@@ -1,37 +1,40 @@
 --- @module backend
 --- @file src/engine/backend/init.lua
---- @description Engine backend entry point for Raylib modules and filesystem implementations.
+--- @description Backend entry point. Modules load on first access, so a headless server never loads raylib.
 
 --- @section Imports
 
-local _ffi = require("ffi")
-local _raylib = require("src.engine.backend.raylib")
+local _lazy = require("src.engine.core.internal.lazy")
 
---- @section Platform Detection
+--- @section Constants
 
-local PLATFORM = _ffi.os:lower()
+local RAYLIB = "src.engine.backend.raylib"
+local PLATFORM = "src.engine.backend.platform." .. require("ffi").os:lower()
 
 --- @section Backend Export
 
-return {
-    window = _raylib.window,
-    draw = _raylib.draw,
-    canvas = _raylib.canvas,
-    mouse = _raylib.mouse,
-    keyboard = _raylib.keyboard,
-    camera = _raylib.camera,
-    draw3d = _raylib.draw3d,
-    lighting = _raylib.lighting,
-    sky = _raylib.sky,
-    audio = _raylib.audio,
-    font = _raylib.font,
-    image = _raylib.image,
-    model = _raylib.model,
-    water = _raylib.water,
-    post = _raylib.post,
+return _lazy.new({
+    -- client (raylib)
+    camera = RAYLIB .. ".render.camera",
+    canvas = RAYLIB .. ".render.canvas",
+    draw = RAYLIB .. ".render.draw",
+    draw3d = RAYLIB .. ".render.draw3d",
+    font = RAYLIB .. ".render.font",
+    image = RAYLIB .. ".render.image",
+    lighting = RAYLIB .. ".render.lighting",
+    model = RAYLIB .. ".render.model",
+    postfx = RAYLIB .. ".render.postfx",
+    sky = RAYLIB .. ".render.sky",
+    window = RAYLIB .. ".render.window",
 
-    process = require("src.engine.backend.platform." .. PLATFORM .. ".process"),
-    filesystem = require("src.engine.backend.platform." .. PLATFORM .. ".filesystem"),
-    http = require("src.engine.backend.platform." .. PLATFORM .. ".http"),
-    network = require("src.engine.backend.platform." .. PLATFORM .. ".network"),
-}
+    mouse = RAYLIB .. ".input.mouse",
+    keyboard = RAYLIB .. ".input.keyboard",
+    -- water = RAYLIB .. ".render.water",
+    -- audio = RAYLIB .. ".audio.audio",
+
+    -- platform (shared, safe headless)
+    -- process = PLATFORM .. ".process",
+    -- filesystem = PLATFORM .. ".filesystem",
+    http = PLATFORM .. ".http",
+    -- network = PLATFORM .. ".network",
+})
