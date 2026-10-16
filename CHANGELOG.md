@@ -1,3 +1,10 @@
+# v0.11.1 
+
+Quick Hotfix
+
+- renamed `hooks.lua`, `commands.lua`, `maths.lua` to `hook`, `command`, `math`
+- updated paths for the above files
+
 # v0.11.0
 
 Folder restructure, API rebuild & Large refactor throughout.
@@ -11,7 +18,7 @@ Folder restructure, API rebuild & Large refactor throughout.
 - `cam` module moved from `src/engine/modules/camera/cam.lua` to `src/sdk/client/camera.lua`.
 - `actions` module now `keymap` actions was a little too none descript for what it is.
 - `image`, `font`, `canvas`, moduels are now object orientated like `camera`
-- `maths.` modules completely replaced for combined `modit.math` (core, easing, stats, probability), & new `modit.mat4`, `modit.vector`
+- `math.` modules completely replaced for combined `modit.math` (core, easing, stats, probability), & new `modit.mat4`, `modit.vector`
 - `modit.draw` is now `modit.draw2d` and `modit.draw3d`
 - `modit.physics` now accepts a dimension through init for later use
 - Dropped 2 runtime modules; `state` seems pointless mods can hold state anyway through reload, `callbacks` again mostly pointless with hook + exports.
@@ -83,23 +90,23 @@ Maths modules, editor improvements, and client/server support.
 - Added an editor **Load Project** menu option.
 - Moved keyboard and mouse input into the new `modules/input/` directory.
 - Added an input actions module for defining and handling higher-level input actions.
-- Replaced the old maths file with a new `modules/math/` directory containing:
+- Replaced the old math file with a new `modules/math/` directory containing:
   - Vector operations (`vec2`, `vec3`, `vec4`).
   - 4×4 matrix operations.
   - 2D and 3D geometry utilities.
   - Easing functions.
   - Probability utilities.
-  - Statistics and core maths helpers.
-- Added a maths `init.lua` entry point to expose maths modules through a single import.
+  - Statistics and core math helpers.
+- Added a math `init.lua` entry point to expose math modules through a single import.
 - Added a new `modules/runtime/` directory containing callbacks, cooldowns, RNG utilities, state management, and timers.
 - Reviewed and corrected mathematical edge cases, input validation, degenerate geometry, and matrix operations.
-- Kept maths modules independent of Raylib for use in game logic and headless server code.
+- Kept math modules independent of Raylib for use in game logic and headless server code.
 - Added support for building both client and server executables using the build tool's target option.
 - Verified the client and server can run together, connect successfully, and support in-game movement.
 
 **Notes:**
 
-- The maths API remains subject to review as the engine develops.
+- The math API remains subject to review as the engine develops.
 - Matrix conventions and rendering integration should continue to be verified against Modit's Raylib backend and camera implementation.
 - Additional modules and API documentation will be reviewed as development continues.
 

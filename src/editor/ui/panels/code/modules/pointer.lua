@@ -6,7 +6,7 @@
 
 --- Engine
 local _input = require("src.sdk.client.input")
-local _math = require("src.sdk.shared.maths")
+local _math = require("src.sdk.shared.math")
 local _ui_input = require("src.sdk.ui.input")
 
 --- Editor

@@ -7,8 +7,8 @@ return {
         "C:/Users/Jord/Desktop/_modit_tests/demo_project",
     },
     sizes = {
-        bottom = 180,
         left = 220,
         right = 280,
+        bottom = 180,
     },
 }

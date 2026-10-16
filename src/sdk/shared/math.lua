@@ -1,6 +1,6 @@
---- @module maths
+--- @module math
 --- @file src/sdk/shared/math.lua
---- @description Core maths, statistics, probability and 2D/3D geometry in one flat API.
+--- @description Core math, statistics, probability and 2D/3D geometry in one flat API.
 
 --- @default_access mod
 

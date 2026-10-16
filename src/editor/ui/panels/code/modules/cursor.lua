@@ -5,7 +5,7 @@
 --- @section Imports
 
 --- Engine
-local _math = require("src.sdk.shared.maths")
+local _math = require("src.sdk.shared.math")
 
 --- Editor
 local _state = require("src.editor.ui.panels.code.modules.state")

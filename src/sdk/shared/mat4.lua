@@ -1,4 +1,4 @@
---- @module maths.mat4
+--- @module math.mat4
 --- @description Streamlined 4x4 matrix utilities for 3D transformations, built on top of the vector module.
 
 --- @default_access mod

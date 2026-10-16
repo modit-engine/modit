@@ -7,7 +7,7 @@ local version_check = require("src.engine.core.internal.version_check")
 
 --- @section Constants
 
-local LOCAL_VERSION = "0.11.0-alpha"
+local LOCAL_VERSION = "0.11.1-alpha"
 local SDK_VERSION = "0.1.0"
 
 local REMOTE_INFO = version_check.check(LOCAL_VERSION)

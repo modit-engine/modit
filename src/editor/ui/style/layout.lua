@@ -4,7 +4,7 @@
 
 --- @section Imports
 
-local _math = require("src.sdk.shared.maths")
+local _math = require("src.sdk.shared.math")
 
 --- @section Constants
 

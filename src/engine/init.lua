@@ -42,7 +42,7 @@ engine.hook = require("src.sdk.shared.hook")
 
 -- Maths Modules
 engine.mat4 = require("src.sdk.shared.mat4")
-engine.math = require("src.sdk.shared.maths")
+engine.math = require("src.sdk.shared.math")
 engine.vector = require("src.sdk.shared.vector")
 
 -- Runtime Modules
