@@ -744,7 +744,7 @@ function m.banner()
     details[#details + 1] = os.date("%Y-%m-%d %H:%M:%S")
 
     m.print(table.concat(details, "  |  "), "dim")
-    m.print("Type 'help' for a list of commands.", "dim")
+    m.print("Type 'help' for a list of command.", "dim")
     m.print("")
 end
 

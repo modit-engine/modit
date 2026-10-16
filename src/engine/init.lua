@@ -12,50 +12,54 @@ local engine = {}
 engine.json = require("src.engine.core.json")
 engine.log = require("src.engine.core.log")
 engine.window = require("src.engine.core.window")
+engine.mods = require("src.engine.core.internal.mod_manager")
 
 --- Client Modules
 -- audio
-engine.audio = require("src.engine.sdk.client.audio")
+engine.audio = require("src.sdk.client.audio")
 
 -- Render
-engine.canvas = require("src.engine.sdk.client.render.canvas")
-engine.draw2d = require("src.engine.sdk.client.render.draw2d")
-engine.draw3d = require("src.engine.sdk.client.render.draw3d")
-engine.font = require("src.engine.sdk.client.render.font")
-engine.image = require("src.engine.sdk.client.render.image")
-engine.lighting = require("src.engine.sdk.client.render.lighting")
-engine.postfx = require("src.engine.sdk.client.render.postfx")
-engine.sky = require("src.engine.sdk.client.render.sky")
-engine.model = require("src.engine.sdk.client.render.model")
-engine.water = require("src.engine.sdk.client.render.water")
+engine.canvas = require("src.sdk.client.canvas")
+engine.draw2d = require("src.sdk.client.draw2d")
+engine.draw3d = require("src.sdk.client.draw3d")
+engine.font = require("src.sdk.client.font")
+engine.image = require("src.sdk.client.image")
+engine.environment = require("src.sdk.client.environment")
+engine.model = require("src.sdk.client.model")
 
 -- Camera
-engine.camera = require("src.engine.sdk.client.camera")
+engine.camera = require("src.sdk.client.camera")
 
 -- Input
-engine.keyboard = require("src.engine.sdk.client.input.keyboard")
-engine.keymap = require("src.engine.sdk.client.input.keymap")
-engine.mouse = require("src.engine.sdk.client.input.mouse")
+engine.input = require("src.sdk.client.input")
+
+engine.ui = require("src.sdk.ui")
 
 --- Shared Modules
-engine.commands = require("src.engine.sdk.shared.commands")
-engine.filesystem = require("src.engine.sdk.shared.filesystem")
-engine.hooks = require("src.engine.sdk.shared.hooks")
+engine.command = require("src.sdk.shared.command")
+engine.filesystem = require("src.sdk.shared.filesystem")
+engine.hook = require("src.sdk.shared.hook")
 
---- Maths Modules
-engine.geometry2d = require("src.engine.sdk.shared.maths.geometry2d")
-engine.geometry3d = require("src.engine.sdk.shared.maths.geometry3d")
-engine.mat4 = require("src.engine.sdk.shared.maths.mat4")
-engine.maths = require("src.engine.sdk.shared.maths.maths")
-engine.vector = require("src.engine.sdk.shared.maths.vector")
+-- Maths Modules
+engine.mat4 = require("src.sdk.shared.mat4")
+engine.math = require("src.sdk.shared.maths")
+engine.vector = require("src.sdk.shared.vector")
 
---- Modding Modules
+-- Runtime Modules
+engine.runtime = require("src.sdk.shared.runtime")
 
---engine.mods = require("src.engine.sdk.shared.mods") -- @todo finish new mod_sandbox before uncomment
+-- Physics Modules
+--engine.physics2d = require("src.sdk.shared.physics2d") -- @todo will add when have box2d added in backend
+engine.physics = require("src.sdk.shared.physics")
 
---- Physics Modules
---engine.physics2d = require("src.engine.sdk.shared.physics2d") -- @todo will add when have box2d added in backend
-engine.physics3d = require("src.engine.sdk.shared.physics3d")
+-- Utility Modules
+engine.string = require("src.sdk.shared.string")
+engine.table = require("src.sdk.shared.table")
+engine.timestamp = require("src.sdk.shared.timestamp")
+
+--- Server Modules
+engine.server_console = require("src.sdk.server.console")
+engine.network = require("src.sdk.server.network")
 
 --- @section Functions
 

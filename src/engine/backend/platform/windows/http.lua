@@ -134,7 +134,7 @@ local m = {}
 --- @return string|nil body
 --- @return number|nil status
 --- @return string|nil error
-function m.get(url, headers)
+function m.request(url, headers)
     if type(url) ~= "string" then return nil, nil, "URL must be a string" end
 
     local parsed, parse_error = parse_url(url)
@@ -158,9 +158,9 @@ function m.get(url, headers)
     end
 
     local flags = parsed.scheme == "https" and WINHTTP_FLAG_SECURE or 0
-    local request = _winhttp.WinHttpOpenRequest(connection, verb, path, nil, nil, nil, flags)
+    local req = _winhttp.WinHttpOpenRequest(connection, verb, path, nil, nil, nil, flags)
 
-    if request == nil then
+    if req == nil then
         local error_code = _winhttp.GetLastError()
         close(connection)
         close(session)
@@ -175,34 +175,34 @@ function m.get(url, headers)
         if #values > 0 then header_buffer = wide(table.concat(values, "\r\n")) end
     end
 
-    if _winhttp.WinHttpSendRequest(request, header_buffer, header_buffer and -1 or 0, nil, 0, 0, 0) == 0 then
+    if _winhttp.WinHttpSendRequest(req, header_buffer, header_buffer and -1 or 0, nil, 0, 0, 0) == 0 then
         local error_code = _winhttp.GetLastError()
-        close(request)
+        close(req)
         close(connection)
         close(session)
         return nil, nil, "WinHttpSendRequest failed: " .. error_code
     end
 
-    if _winhttp.WinHttpReceiveResponse(request, nil) == 0 then
+    if _winhttp.WinHttpReceiveResponse(req, nil) == 0 then
         local error_code = _winhttp.GetLastError()
-        close(request)
+        close(req)
         close(connection)
         close(session)
         return nil, nil, "WinHttpReceiveResponse failed: " .. error_code
     end
 
-    local status, status_error = get_status(request)
+    local status, status_error = get_status(req)
 
     if not status then
-        close(request)
+        close(req)
         close(connection)
         close(session)
         return nil, nil, "failed to read HTTP status: " .. status_error
     end
 
-    local body, body_error = read_body(request)
+    local body, body_error = read_body(req)
 
-    close(request)
+    close(req)
     close(connection)
     close(session)
 

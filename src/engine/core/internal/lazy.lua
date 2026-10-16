@@ -7,14 +7,20 @@
 local m = {}
 
 --- Creates a lazy module table
---- @param paths table Map of name to module path
---- @return table lazy Table that requires each module on first access
+--- @param paths table Map of name to module path or helper function
+--- @return table lazy Table that requires each module or returns functions on first access
 function m.new(paths)
     return setmetatable({}, {
         __index = function(self, name)
             local path = paths[name]
             if not path then
                 error(("missing module '%s'"):format(tostring(name)), 2)
+            end
+
+            -- If the entry is a function wrapper, return it directly
+            if type(path) == "function" then
+                rawset(self, name, path)
+                return path
             end
 
             local mod = require(path)

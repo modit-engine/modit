@@ -1,3 +1,32 @@
+# v0.11.0
+
+Folder restructure, API rebuild & Large refactor throughout.
+
+- Vendor files now served from `vendor/windows/`.
+- New `vendor/licenses/` added to hold third party licenses Modit uses.
+- New folder structure: `src/sdk/` now hold all modules game and mods can use split by realm.
+- New `engine.run()` function added to handle running the engine/editor as a single source.
+- New `lazy.lua` added to the core to be used to lazy load modules.
+- Raylib `src/engine/backend/raylib/render/post.lua` updated now supports sending in a vertex + fragment shader, fallsback to default if none or fails `post`.
+- `cam` module moved from `src/engine/modules/camera/cam.lua` to `src/sdk/client/camera.lua`.
+- `actions` module now `keymap` actions was a little too none descript for what it is.
+- `image`, `font`, `canvas`, moduels are now object orientated like `camera`
+- `maths.` modules completely replaced for combined `modit.math` (core, easing, stats, probability), & new `modit.mat4`, `modit.vector`
+- `modit.draw` is now `modit.draw2d` and `modit.draw3d`
+- `modit.physics` now accepts a dimension through init for later use
+- Dropped 2 runtime modules; `state` seems pointless mods can hold state anyway through reload, `callbacks` again mostly pointless with hook + exports.
+- Top-level blocks (server and modding) now feature master enabled switches and grouped sub-settings (such as modding.blacklisted_modules and server.network).
+- Refactored the environment loader to parse `--- @access` and `--- @default_access` metadata tags, strictly enforcing role visibility (mod, game, engine).
+- New `modit.string`, `table`, and `timestamp` modules.
+- `api-cheatsheet.md` updated to fully reflect new api changes reference this to update current code its not backwards compat.
+
+Notes:
+
+- A lot of functions have changed, best advice would be to just run the `api-cheatsheet.md` through a diff check with the one inside `0.10.0`.
+- Hopefully should be the last major change to the api for a while, or at least until people complain about things they want changing.
+- `engine.run` now controlls lifecycle for example `engine.run({ window = {...}, draw = function() ... end, update = function() ... end})` this mostly wont matter, it's an engine change
+
+
 # v0.10.0
 
 API Cleanup & Documentation.
@@ -22,7 +51,7 @@ Physics & Box3D Integration.
 Notes:
 - Be careful not to spam or overload physics tick/update loops with unhandled errors. Rapid failures in `update` listeners can trigger table overflows and disconnects:
 error     20:41:04    network connection failed: connection refused
-error     20:41:37    [hooks] 'update' listener from default_world removed after error: table overflow
+error     20:41:37    [hook] 'update' listener from default_world removed after error: table overflow
 
 This will be fully addressed and fixed before `v0.10.0`.
 
@@ -54,7 +83,7 @@ Maths modules, editor improvements, and client/server support.
 - Added an editor **Load Project** menu option.
 - Moved keyboard and mouse input into the new `modules/input/` directory.
 - Added an input actions module for defining and handling higher-level input actions.
-- Replaced the old maths file with a new `modules/maths/` directory containing:
+- Replaced the old maths file with a new `modules/math/` directory containing:
   - Vector operations (`vec2`, `vec3`, `vec4`).
   - 4×4 matrix operations.
   - 2D and 3D geometry utilities.
@@ -99,7 +128,7 @@ Changes:
 
 * Too many to really name? will cover important ones
 * Headless server support built into core
-* Built in commands for headless server moved
+* Built in command for headless server moved
 * Editor updated to support project templates *(templates are not complete support is there)*
 * Editor can now run server or client and only offers server options if enabled in game config
 * Changes to runner to support the server side correctly
@@ -213,3 +242,5 @@ Current backend/runtime foundations:
 * Developer console
 
 The project is still very much in development and the architecture, APIs and project structure will continue to change significantly before the first stable release.
+
+

@@ -1,5 +1,5 @@
 --- @file src/main.lua
---- @description Entry point. Opens the window and runs the draw test.
+--- @description Entry point. Initializes the engine and launches the editor.
 
 --- @section Package Path
 
@@ -8,24 +8,18 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 --- @section Imports
 
 local modit = require("src.engine")
-
---- @section Constants
-
-local VERSION = "0.10.0-alpha"
+local editor = require("src.editor")
+local ver = require("src.version")
+local ui_input = require("src.sdk.ui.input")
 
 --- @section Run
 
--- local lighting_test = require("src.engine.tests.lighting")(modit) -- lighting: update + draw
-local water_test = require("src.engine.tests.water")(modit) -- water: update + draw
-local model_test = require("src.engine.tests.model")(modit) -- model: update + draw
-local physics3d_test = require("src.engine.tests.physics3d")(modit) -- model: update + draw
-
 modit.run({
-    version = VERSION,
+    version = ver.engine,
     check_updates = true,
 
     window = {
-        title = "Modit Engine - V" .. VERSION,
+        title = "Modit Engine - " .. ver.display,
         icon = "src/engine/assets/branding/modit_icon_32x32.png",
         console = false,
         size = { width = 1600, height = 900 },
@@ -37,19 +31,27 @@ modit.run({
         audio = true
     },
 
-    update = physics3d_test.update,
-    draw = physics3d_test.draw,
+    load = function()
+        editor.init()
+        if arg[1] then
+            editor.open_project(arg[1])
+        end
+    end,
+
+    update = function(dt)
+        editor.update(dt)
+    end,
+
+    draw = function()
+        if ui_input and ui_input.begin_frame then ui_input.begin_frame() end
+
+        editor.draw()
+        modit.draw2d.reset_clip()
+
+        if ui_input and ui_input.end_frame then ui_input.end_frame() end
+    end,
+
+    quit = function()
+        editor.close()
+    end,
 })
-
---- @section Test files
---- @todo remove
-
--- draw = require("src.engine.tests.draw2d")(modit) -- draw & camera: 2d drawing + cam + font + images
--- draw = require("src.engine.tests.draw3d")(modit) -- draw & camera:3d drawing + cam
--- draw = require("src.engine.tests.commands_hooks")(modit) -- commands & hooks: commands + hooks
--- draw = require("src.engine.tests.canvas")(modit) -- canvas: minimap + fixed res + mouse mapping
--- draw = require("src.engine.tests.postfx")(modit) -- postfx: options, scene size, shaders
--- draw = require("src.engine.tests.lighting")(modit) -- lighting & sky: sun, ambient, fog, shadow modes, sky backdrop
--- draw = require("src.engine.tests.maths")(modit) -- maths, geometry, vector, mat4
--- draw = require("src.engine.tests.audio")(modit) -- audio: sounds, music, volume, pitch, unload safety
--- draw = require("src.engine.tests.water")(modit) -- water: presets, toggle, reset, height_at

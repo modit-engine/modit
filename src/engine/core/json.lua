@@ -27,7 +27,9 @@ local DECODE_ESCAPES = {
 
 --- @section Initialisation
 
-local m = {}
+local m = {
+    mod_safe = true
+}
 
 --- @section Helpers
 
@@ -237,6 +239,7 @@ end
 --- @section Methods
 
 --- Encodes a Lua value as JSON.
+--- @access mod
 --- @param value any Value to encode.
 --- @return string json Encoded JSON string.
 function m.encode(value)
@@ -244,6 +247,7 @@ function m.encode(value)
 end
 
 --- Decodes a JSON string into a Lua value.
+--- @access mod
 --- @param input string JSON string to decode.
 --- @return any value Decoded Lua value.
 function m.decode(input)

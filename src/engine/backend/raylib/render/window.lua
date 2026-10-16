@@ -11,6 +11,9 @@ local _ffi, _lib, _Color = _raylib.ffi, _raylib.lib, _raylib.Color
 
 --- @section Constants & Flags
 
+local KEY_NULL = 0
+local KEY_ESCAPE = 256
+
 local WINDOW_FLAGS = {
     vsync_hint = _ffi.C.FLAG_VSYNC_HINT,
     fullscreen_mode = _ffi.C.FLAG_FULLSCREEN_MODE,
@@ -49,7 +52,8 @@ local m = {}
 --- @param icon_path string|nil Path to window icon image file
 --- @param enable_audio boolean|nil Whether to initialize audio subsystem
 --- @param target_fps number|nil Target frame rate limit
-function m.init(title, width, height, flags, icon_path, enable_audio, target_fps)
+--- @param exit_on_escape boolean|nil Whether the ESC key closes the window (default false)
+function m.init(title, width, height, flags, icon_path, enable_audio, target_fps, exit_on_escape)
     local want_maximized = flags and flags.maximized
 
     local flag_mask = 0
@@ -63,6 +67,7 @@ function m.init(title, width, height, flags, icon_path, enable_audio, target_fps
 
     _lib.SetConfigFlags(flag_mask)
     _lib.InitWindow(width, height, title)
+    _lib.SetExitKey(exit_on_escape and KEY_ESCAPE or KEY_NULL)
 
     if want_maximized then
         _lib.MaximizeWindow()
