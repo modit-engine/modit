@@ -1,33 +1,47 @@
 --- @module ui
 --- @file src/sdk/ui/init.lua
---- @description Lazy-loaded client UI SDK entry point.
+--- @description Client UI SDK entry point. Each entry loads its module on first use.
 
 --- @default_access mod
-
---- @section Imports
-
-local _lazy = require("src.engine.core.internal.lazy")
 
 --- @section Constants
 
 local UI = "src.sdk.ui"
 
+--- @section Helpers
+
+local function component(path)
+    local loaded
+    return function(...)
+        loaded = loaded or require(path)
+        return loaded(...)
+    end
+end
+
+local function namespace(path)
+    return setmetatable({}, {
+        __index = function(_, key)
+            return require(path)[key]
+        end,
+    })
+end
+
 --- @section SDK Export
 
-return _lazy.new({
-    -- Core Modules & Themes (must be string paths, not evaluated require() tables)
-    theme = UI .. ".theme",
-    input = UI .. ".input",
-    icons = UI .. ".icons",
+return {
+    -- Core Modules & Themes
+    theme = namespace(UI .. ".theme"),
+    input = namespace(UI .. ".input"),
+    icons = namespace(UI .. ".icons"),
 
     -- Atomic Components & Layouts
-    button = UI .. ".components.button",
-    item = UI .. ".components.item",
-    label = UI .. ".components.label",
-    panel = UI .. ".components.panel",
-    splitter = UI .. ".components.splitter",
-    textfield = UI .. ".components.textfield",
-    toggle = UI .. ".components.toggle",
+    button = component(UI .. ".components.button"),
+    item = component(UI .. ".components.item"),
+    label = component(UI .. ".components.label"),
+    panel = component(UI .. ".components.panel"),
+    splitter = component(UI .. ".components.splitter"),
+    textfield = component(UI .. ".components.textfield"),
+    toggle = component(UI .. ".components.toggle"),
 
     -- Deferred function wrappers using closures
     scroll_begin = function(...) return require(UI .. ".components.scroll").begin(...) end,
@@ -40,4 +54,4 @@ return _lazy.new({
     close_modal = function(...) return require(UI .. ".overlays.modal").close(...) end,
     is_modal_open = function(...) return require(UI .. ".overlays.modal").is_open(...) end,
     draw_modal = function(...) return require(UI .. ".overlays.modal").draw(...) end,
-})
+}

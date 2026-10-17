@@ -497,7 +497,7 @@ modit.physics.is_world_active() -- Checks whether the physics world exists [game
 
 -- World Simulation
 modit.physics.update_world(dt) -- Advances the simulation in fixed steps and collects events [game]
-modit.physics.get_world_events() -- Returns the events collected by the last update. Handles may refer to bodies destroyed since, check body.is_valid [game]
+modit.physics.get_world_events() -- Returns the events collected by the last update: touch_begin, touch_end, hit, sensor_begin, sensor_end. Each has shape_a, shape_b, body_a, body_b. Hit events also have x, y, z (point), nx, ny, nz (normal) and speed (approach speed). Only shapes created with events = true produce events. Handles may refer to bodies destroyed since, check is_body_valid [game]
 
 -- World Gravity
 modit.physics.set_world_gravity(x, y, z) -- Sets world gravity [game]
@@ -537,8 +537,14 @@ modit.physics.is_body_awake(body) -- Checks whether a body is awake [game]
 modit.physics.set_body_awake(body, awake) -- Wakes or sleeps a body [game]
 modit.physics.set_body_enabled(body, enabled) -- Enables or disables a body in the simulation [game]
 
+-- Joints
+modit.physics.create_spherical_joint(body_a, body_b, opts) -- Creates a ball and socket joint. Opts: anchor_a, anchor_b {x,y,z} in each body's local space, frame_a, frame_b {x,y,z,w}, cone_angle, twist_lower, twist_upper (radians), spring_hertz, spring_damping, collide_connected [game]
+modit.physics.create_revolute_joint(body_a, body_b, opts) -- Creates a hinge joint. Opts: anchor_a, anchor_b, frame_a, frame_b, lower, upper (radians), spring_hertz, spring_damping, collide_connected [game]
+modit.physics.destroy_joint(joint) -- Destroys a joint [game]
+modit.physics.is_joint_valid(joint) -- Checks whether a joint handle is still valid [game]
+
 -- Shape Creation
-modit.physics.add_box_shape(body, half_x, half_y, half_z, opts) -- Attaches a box shape [game]
+modit.physics.add_box_shape(body, half_x, half_y, half_z, opts) -- Attaches a box shape. Opts: density, friction, restitution, sensor, events, category, mask, ox, oy, oz [game]
 modit.physics.add_sphere_shape(body, radius, opts) -- Attaches a sphere shape [game]
 modit.physics.add_capsule_shape(body, radius, half_height, opts) -- Attaches a capsule shape standing along the Y axis [game]
 

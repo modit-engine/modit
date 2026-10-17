@@ -14,4 +14,5 @@ return {
     shape = require(BOX3D_PATH .. ".shape"),
     query = require(BOX3D_PATH .. ".query"),
     events = require(BOX3D_PATH .. ".events"),
+    joint = require(BOX3D_PATH .. ".joint"),
 }

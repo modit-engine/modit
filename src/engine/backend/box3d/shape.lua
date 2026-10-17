@@ -22,6 +22,9 @@ local scratch_capsule = _ffi.new("b3Capsule")
 --- @return cdata def b3ShapeDef
 local function make_def(opts)
     local def = _lib.b3DefaultShapeDef()
+
+    def.updateBodyMass = true
+
     if not opts then return def end
 
     if opts.density then def.density = opts.density end

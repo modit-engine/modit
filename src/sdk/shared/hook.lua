@@ -43,6 +43,7 @@ end
 --- @section Functions
 
 --- Declares a hook name with an optional description
+--- @access mod
 --- @param name string Hook name
 --- @param description string|nil What the hook is for
 function m.register(name, description)
@@ -52,6 +53,7 @@ function m.register(name, description)
 end
 
 --- Adds a listener to a hook
+--- @access mod
 --- @param name string Hook name
 --- @param callback function Called with the arguments given to fire
 --- @param owner string|nil Owner tag, used by remove_owner
@@ -71,6 +73,7 @@ function m.listen(name, callback, owner)
 end
 
 --- Calls every listener of a hook in the order they were added
+--- @access mod
 --- @param name string Hook name
 --- @param ... any Arguments passed to each listener
 function m.fire(name, ...)
@@ -97,6 +100,7 @@ function m.fire(name, ...)
 end
 
 --- Removes one listener
+--- @access mod
 --- @param name string Hook name
 --- @param callback function The function passed to listen
 function m.unlisten(name, callback)
@@ -142,6 +146,7 @@ function m.clear_all()
 end
 
 --- Lists declared hook names
+--- @access mod
 --- @return table names Sorted array of names
 function m.list()
     local names = {}

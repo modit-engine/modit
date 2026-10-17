@@ -203,4 +203,12 @@ function m.draw_fps(pos_x, pos_y)
     _lib.DrawFPS(pos_x, pos_y)
 end
 
+--- Gets top-left window coordinates on screen
+--- @return number x Screen X position
+--- @return number y Screen Y position
+function m.get_position()
+    local p = _lib.GetWindowPosition()
+    return p.x, p.y
+end
+
 return m

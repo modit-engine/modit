@@ -42,6 +42,8 @@ local ROLE_RANK = { mod = 1, game = 2, engine = 3 }
 
 local SAFE_GLOBALS = { "assert", "error", "ipairs", "pairs", "next", "pcall", "xpcall", "select", "tonumber", "tostring", "type", "unpack", "setmetatable", "rawget", "rawset", "rawequal" }
 
+local ALWAYS_ON = { window = true, log = true, json = true }
+
 --- @section Initialisation
 
 local m = {}
@@ -285,7 +287,7 @@ function m.load_environment(realm, role, opts)
     local env = {}
 
     for name, mod in pairs(load_realm(realm)) do
-        if name == "window" or not enabled_map or enabled_map[name] == true then
+        if ALWAYS_ON[name] or not enabled_map or enabled_map[name] == true then
             local view = build_view(mod, caller_rank)
             if next(view) ~= nil then env[name] = view end
         end

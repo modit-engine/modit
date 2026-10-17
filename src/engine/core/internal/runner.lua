@@ -136,6 +136,8 @@ local function build_dynamic_engine(is_headless)
 
     engine.config = conf
     engine.game_dir = GAME_DIR
+    engine.project_dir = project
+    
     engine.global_name = GLOBAL_NAME
     _G[GLOBAL_NAME] = engine
 

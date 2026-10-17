@@ -215,6 +215,12 @@ local function texture_is_used(native_model, texture_id)
     return false
 end
 
+local function resolve(path)
+    if path:match("^%a:[/\\]") or path:sub(1, 1) == "/" then return path end
+    local dir = modit and modit.project_dir
+    return dir and (dir .. "/" .. path) or path
+end
+
 --- Reads VOX authoring data through the Lua scene importer, retaining named parts
 --- @param path string VOX file path
 --- @return table|nil definition Portable asset description
@@ -293,6 +299,7 @@ end
 --- @return string|nil reason Failure description
 function m.load(path)
     if not _lib.IsWindowReady() then return nil, "model loading needs an open window" end
+    path = resolve(path)
     if not _lib.FileExists(path) then return nil, "model file does not exist: " .. path end
     local valid, reason = check_model_file(path)
     if not valid then return nil, reason end

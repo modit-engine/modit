@@ -1,3 +1,10 @@
+# v0.11.2
+
+More Functions & Tweaks
+
+- Physics module now handles joints.
+- Missing @default_access tags added to files
+
 # v0.11.1 
 
 Quick Hotfix

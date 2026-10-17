@@ -41,6 +41,7 @@ _state.accumulator = 0
 _state.next_handle = 0
 _state.bodies = {}
 _state.shapes = {}
+_state.joints = {}  
 _state.events = {}
 
 -- helpers
@@ -99,6 +100,7 @@ function _state.reset()
     _state.accumulator = 0
     _state.bodies = {}
     _state.shapes = {}
+    _state.joints = {} 
     _state.clear_events()
 end
 
@@ -336,6 +338,9 @@ function m.destroy_body(body)
     end
 
     _box3d.body.destroy(record.id)
+    for joint_handle, joint in pairs(_state.joints) do
+        if joint.a == body or joint.b == body then _state.joints[joint_handle] = nil end
+    end
     _state.bodies[body] = nil
     return count
 end
@@ -622,6 +627,138 @@ end
 --- @param enabled boolean Target state
 function m.set_body_enabled(body, enabled)
     _box3d.body.set_enabled(_state.get_body(body).id, enabled and true or false)
+end
+
+--- @section Joints
+
+--- Validates an optional joint frame quaternion and returns a normalised copy
+--- @param q table|nil Quaternion {x,y,z,w}
+--- @param name string Argument name for the message
+--- @return table|nil frame Normalised quaternion, nil when omitted
+local function read_frame(q, name)
+    if q == nil then return nil end
+    if type(q) ~= "table" then error(name .. " must be a table with x, y, z, w", 4) end
+
+    local x, y, z, w = q.x or 0, q.y or 0, q.z or 0, q.w or 1
+    _validate.check_number(x, name .. ".x")
+    _validate.check_number(y, name .. ".y")
+    _validate.check_number(z, name .. ".z")
+    _validate.check_number(w, name .. ".w")
+
+    local length = math.sqrt(x * x + y * y + z * z + w * w)
+    if length < 1e-6 then error(name .. " must not be zero", 4) end
+    return { x = x / length, y = y / length, z = z / length, w = w / length }
+end
+
+--- Validates the options shared by every joint type
+--- @param opts table|nil Joint options
+--- @return table safe Backend-safe options
+local function read_joint_opts(opts)
+    opts = opts or {}
+    if type(opts) ~= "table" then error("joint options must be a table", 3) end
+
+    local ax, ay, az = _validate.read_vec(opts.anchor_a, "anchor_a")
+    local bx, by, bz = _validate.read_vec(opts.anchor_b, "anchor_b")
+
+    local safe = {
+        ax = ax, ay = ay, az = az,
+        bx = bx, by = by, bz = bz,
+        frame_a = read_frame(opts.frame_a, "frame_a"),
+        frame_b = read_frame(opts.frame_b, "frame_b"),
+        collide_connected = opts.collide_connected and true or nil,
+    }
+
+    for _, key in ipairs({ "spring_hertz", "spring_damping" }) do
+        if opts[key] ~= nil then
+            _validate.check_number(opts[key], key)
+            safe[key] = opts[key]
+        end
+    end
+
+    return safe
+end
+
+--- Registers a joint between two bodies
+--- @param joint_id cdata Backend joint id
+--- @param body_a number First body handle
+--- @param body_b number Second body handle
+--- @param handle number Joint handle
+--- @return number handle Joint handle
+local function register_joint(joint_id, body_a, body_b, handle)
+    _state.joints[handle] = { id = joint_id, a = body_a, b = body_b }
+    return handle
+end
+
+--- Creates a ball and socket joint. Bodies it connects do not collide with each other unless collide_connected is set
+--- @param body_a number First body handle
+--- @param body_b number Second body handle
+--- @param opts table|nil Fields: anchor_a {x,y,z} and anchor_b {x,y,z} in each body's local space, frame_a and frame_b {x,y,z,w} local frame rotations, cone_angle, twist_lower, twist_upper (radians), spring_hertz, spring_damping, collide_connected
+--- @return number handle Joint handle
+function m.create_spherical_joint(body_a, body_b, opts)
+    _state.check_world()
+    if body_a == body_b then error("a joint needs two different bodies", 2) end
+
+    local record_a, record_b = _state.get_body(body_a), _state.get_body(body_b)
+    local safe = read_joint_opts(opts)
+
+    for _, key in ipairs({ "cone_angle", "twist_lower", "twist_upper" }) do
+        if opts and opts[key] ~= nil then
+            _validate.check_number(opts[key], key)
+            safe[key] = opts[key]
+        end
+    end
+
+    if (safe.twist_lower == nil) ~= (safe.twist_upper == nil) then
+        error("twist_lower and twist_upper must be given together", 2)
+    end
+
+    local handle = _state.new_handle()
+    safe.user_id = handle
+    return register_joint(_box3d.joint.create_spherical(_state.world, record_a.id, record_b.id, safe), body_a, body_b, handle)
+end
+
+--- Creates a hinge joint. Bodies it connects do not collide with each other unless collide_connected is set
+--- @param body_a number First body handle
+--- @param body_b number Second body handle
+--- @param opts table|nil Fields: anchor_a, anchor_b, frame_a, frame_b, lower, upper (radians), spring_hertz, spring_damping, collide_connected
+--- @return number handle Joint handle
+function m.create_revolute_joint(body_a, body_b, opts)
+    _state.check_world()
+    if body_a == body_b then error("a joint needs two different bodies", 2) end
+
+    local record_a, record_b = _state.get_body(body_a), _state.get_body(body_b)
+    local safe = read_joint_opts(opts)
+
+    for _, key in ipairs({ "lower", "upper" }) do
+        if opts and opts[key] ~= nil then
+            _validate.check_number(opts[key], key)
+            safe[key] = opts[key]
+        end
+    end
+
+    if (safe.lower == nil) ~= (safe.upper == nil) then error("lower and upper must be given together", 2) end
+
+    local handle = _state.new_handle()
+    safe.user_id = handle
+    return register_joint(_box3d.joint.create_revolute(_state.world, record_a.id, record_b.id, safe), body_a, body_b, handle)
+end
+
+--- Destroys a joint
+--- @param joint number Joint handle
+function m.destroy_joint(joint)
+    local record = _state.joints[joint]
+    if not record then error("invalid physics joint handle: " .. tostring(joint), 2) end
+
+    _box3d.joint.destroy(record.id)
+    _state.joints[joint] = nil
+end
+
+--- Checks whether a joint handle is still valid
+--- @param joint number Joint handle
+--- @return boolean valid True if it exists
+function m.is_joint_valid(joint)
+    local record = _state.joints[joint]
+    return record ~= nil and _box3d.joint.is_valid(record.id)
 end
 
 --- @section Shape Creation

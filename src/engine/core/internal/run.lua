@@ -116,7 +116,10 @@ function m.run(engine, conf)
     end
 
     local function paint()
+        local ui_input = conf.modules and conf.modules.ui == true and engine.ui and engine.ui.input
+        if ui_input then ui_input.begin_frame() end
         if game.draw then game.draw() end
+        if ui_input then ui_input.end_frame() end
     end
 
     while not engine.window.should_close() do
