@@ -1,5 +1,5 @@
 --- @module filesystem
---- @file src/engine/sdk/shared/filesystem.lua
+--- @file src/sdk/shared/filesystem.lua
 --- @description Saves and loads Lua data tables inside the project's save folder.
 
 --- @section Imports

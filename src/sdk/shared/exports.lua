@@ -1,5 +1,5 @@
 --- @module exports
---- @file src/engine/modules/exports.lua
+--- @file src/sdk/shared/exports.lua
 --- @description Cross-mod function exports. Calls go through here, never through another mod's environment.
 
 --- @section Initialisation

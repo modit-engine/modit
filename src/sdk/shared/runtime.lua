@@ -37,7 +37,7 @@ local timer_meta = {
     }
 }
 
---- @section Helper Functions
+--- @section Helpers
 
 local function add_timer(delay, interval, count, fn, owner)
     assert(type(fn) == "function", "timer callback must be a function")

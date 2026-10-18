@@ -1,5 +1,5 @@
---- @module mods
---- @file src/engine/modules/mods.lua
+--- @module mod_manager
+--- @file src/engine/core/internal/mod_manager.lua
 --- @description Mod loader: finds, sandboxes, starts and stops mods.
 
 --- @section Imports
@@ -19,6 +19,7 @@ local RESERVED = {
     client = { update = true, draw = true, hud = true, console_toggled = true },
     server = { update = true },
 }
+local POLL_INTERVAL = 0.25
 
 --- @section Initialisation
 
@@ -26,6 +27,9 @@ local m = {
     root = nil,
     config = {},
 }
+
+local last_poll = 0
+local pending = {} -- name -> true once a change has been seen (acts as the debounce)
 
 function m.init(config, game_dir)
     m.config = config or {}
@@ -68,12 +72,10 @@ local function read_file(path)
     return content
 end
 
---- Accepts only relative paths that stay inside the mod folder
 local function safe_path(path)
     return type(path) == "string" and path ~= "" and not path:find("..", 1, true) and not path:find("[:\\]") and path:sub(1, 1) ~= "/"
 end
 
---- Creates the declaration environment used by manifest.lua
 local function make_manifest_env()
     local manifest = {
         sdk_version = nil,
@@ -379,7 +381,7 @@ function m.stop(name)
     mod.state = "stopped"
     _commands.remove_owner(name)
     
-    sync_public_registry() -- <--- ADD THIS
+    sync_public_registry()
     _log.print("info", name, "stopped")
 end
 
@@ -432,10 +434,6 @@ function m.list()
     return list
 end
 
-local POLL_INTERVAL = 0.25
-local last_poll = 0
-local pending = {} -- name -> true once a change has been seen (acts as the debounce)
-
 local function is_dirty(mod)
     local files = { "manifest.lua" }
     for _, list_name in ipairs(PATH_LISTS) do
@@ -446,7 +444,7 @@ local function is_dirty(mod)
         local path = m.root .. "/" .. mod.name .. "/" .. file
         local content = read_file(path)
         if snapshots[path] == nil then
-            snapshots[path] = content -- never loaded (e.g. after a failure): baseline only
+            snapshots[path] = content
         elseif content ~= snapshots[path] then
             dirty = true
         end
@@ -471,7 +469,7 @@ function m.poll()
                 _log.print("info", name, "files changed, reloading")
                 m.restart(name)
             else
-                pending[name] = true -- wait one more tick so two-step editor saves settle
+                pending[name] = true
             end
         else
             pending[name] = nil

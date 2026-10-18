@@ -1,5 +1,5 @@
 --- @module dropdown
---- @file src/engine/sdk/client/ui/overlays/dropdown.lua
+--- @file src/sdk/ui/overlays/dropdown.lua
 --- @description Stateful dropdown menu header and popup overlay component with submenu support.
 
 --- @section Imports

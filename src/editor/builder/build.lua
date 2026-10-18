@@ -92,9 +92,6 @@ local project = opts.project:gsub("[/\\]+$", "")
 local log_file = opts.log and io.open(opts.log, "w")
 if log_file then log_file:setvbuf("line") end
 
---- Prints a build message, and mirrors it to the editor log file when --log is set
---- @param level string "info", "success", "warn" or "error"
---- @param text string Message
 local function emit(level, text)
     print("[BUILD] " .. text)
 
@@ -106,7 +103,6 @@ local function emit(level, text)
     end
 end
 
---- Logs an error and exits
 local function fail(text)
     emit("error", text)
     if log_file then log_file:close() end
@@ -136,7 +132,6 @@ local function native(path)
     return path
 end
 
---- Runs a command through the shell and returns its exit code
 local function run(command)
     local code = os.execute('"' .. command .. '"')
     if code == true then return 0 end
@@ -167,7 +162,6 @@ local function copy_file(from, to)
     return write_file(to, content)
 end
 
---- Lists the files or folders directly inside a folder, sorted
 local function list_dir(path, folders)
     local command
     if IS_WINDOWS then
@@ -191,7 +185,6 @@ local function list_dir(path, folders)
     return names
 end
 
---- Collects every .lua file under a folder as key -> disk path
 local function scan_lua(dir, prefix, into)
     for _, file in ipairs(list_dir(dir, false)) do
         if file:match("%.lua$") then
@@ -206,7 +199,6 @@ local function scan_lua(dir, prefix, into)
     end
 end
 
---- Copies a folder tree. skip(relative, is_folder) returns true to leave something out
 local function copy_tree(from, to, relative, skip, counter)
     for _, file in ipairs(list_dir(from, false)) do
         local rel = relative .. file
@@ -229,7 +221,6 @@ end
 
 --- @section Launcher Stub
 
---- Finds vcvars64.bat, which sets up the Visual Studio compiler environment
 local function find_vcvars()
     local override = os.getenv("VCVARS")
     if override then return override end
@@ -250,7 +241,6 @@ local function find_vcvars()
     if read_file(vcvars) then return vcvars end
 end
 
---- Compiles the stub (tools/build/stub_source.lua) once and caches it in src/bin
 local function build_stub(cache_path)
     if not IS_WINDOWS then
         fail("the launcher stub can only be compiled on Windows. Pass --stub <path> instead.")
@@ -319,7 +309,6 @@ local function build_stub(cache_path)
     return built
 end
 
---- Returns the launcher stub bytes, compiling it first if needed
 local function get_stub()
     if opts.stub then
         local custom = read_file(opts.stub)
@@ -336,7 +325,6 @@ local function get_stub()
     return build_stub(cache_path)
 end
 
---- Switches a Windows exe between console and windowed (GUI) subsystem
 local function set_subsystem(exe, console)
     if exe:sub(1, 2) ~= "MZ" then return exe, false end
 
@@ -344,7 +332,6 @@ local function set_subsystem(exe, console)
     local pe = b1 + b2 * 256 + b3 * 65536 + b4 * 16777216
     if exe:sub(pe + 1, pe + 4) ~= "PE\0\0" then return exe, false end
 
-    -- Optional header starts 24 bytes after the signature, Subsystem is 68 bytes into it
     local at = pe + 24 + 68 + 1
     return exe:sub(1, at - 1) .. string.char(console and 3 or 2, 0) .. exe:sub(at + 2), true
 end
@@ -360,7 +347,6 @@ local function u32(value)
     )
 end
 
---- Builds the data appended to the stub from a key -> content table
 local function pack(entries)
     local keys = {}
     for key in pairs(entries) do
@@ -378,7 +364,6 @@ local function pack(entries)
     return body .. u32(#keys) .. u32(#body) .. MAGIC
 end
 
---- Reads a Lua file, checks its syntax, and returns what should be embedded
 local function embed(key, path)
     local source = read_file(path)
     if not source then fail("could not read " .. path) end
@@ -392,7 +377,6 @@ local function embed(key, path)
     return source
 end
 
---- Reads game/config.lua to find the window.console default
 local function read_config()
     local chunk = loadfile(project .. "/game/config.lua")
     if not chunk then return {} end
@@ -423,11 +407,10 @@ name = name:gsub("[^%w_%-]", "_")
 
 local conf = read_config()
 local console = opts.console
-if opts.target == "server" then
-    console = true
-elseif console == nil then
-    console = conf.window and conf.window.console or false
+if console == nil then
+    console = opts.target == "client" and (conf.window and conf.window.console or false) or false
 end
+
 if opts.mods == nil then
     opts.mods = conf.modding and conf.modding.enabled == true
 end
@@ -438,19 +421,18 @@ emit("info", ("Building '%s' target (%s mode)"):format(
     opts.target, console and "console" or "windowed"
 ))
 
---- Embedded files
+--- @section Embedded files
 
 emit("info", "Collecting Lua files...")
 
 local files = {}
 scan_lua(ROOT .. "/src/engine", "src/engine/", files)
-scan_lua(ROOT .. "/src/sdk", "src/sdk/", files) -- Make sure this is included!
+scan_lua(ROOT .. "/src/sdk", "src/sdk/", files)
 if read_file(ROOT .. "/src/version.lua") then
     files["src/version.lua"] = ROOT .. "/src/version.lua"
 end
 scan_lua(project .. "/game", "game/", files)
 
--- Save files are data, not code, and are never shipped
 for key in pairs(files) do
     if key:match("^game/save/") then files[key] = nil end
 end
@@ -471,11 +453,9 @@ if not prelude then fail("tools/build/prelude.lua not found") end
 entries["@prelude"] = prelude
 entries["@meta"] = ("return { name = %q, target = %q }"):format(name, opts.target)
 
-emit("info", ("Embedding %d Lua files%s"):format(
-    count, opts.bytecode and " as bytecode" or ""
-))
+emit("info", ("Embedding %d Lua files%s"):format(count, opts.bytecode and " as bytecode" or ""))
 
---- Executable
+--- @section Executable
 
 local exe = get_stub()
 local patched
@@ -513,13 +493,12 @@ for _, dll in ipairs(runtime_dlls) do
     emit("info", "Copied runtime DLL: " .. dll)
 end
 
--- Ensure an external mods folder always exists in the build output for players
 if opts.mods then
     make_dir(out .. "/mods")
     emit("info", "Initialized external mods folder: /mods")
 end
 
---- Project files: everything except game Lua (embedded), builds, saves, logs, and .modit metadata
+--- @section Project files: everything except game Lua (embedded), builds, saves, logs, and .modit metadata
 
 local extras = { files = 0 }
 copy_tree(project, out, "", function(relative, is_folder)

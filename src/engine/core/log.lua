@@ -21,7 +21,7 @@ local min_level_index = LEVEL_INDEX.debug
 local enable_color = true
 local cached_palette = nil
 
---- @section Helper Functions
+--- @section Helpers
 
 local function get_palette()
     if cached_palette then

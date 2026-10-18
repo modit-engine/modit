@@ -1,5 +1,5 @@
 --- @module camera
---- @file src/engine/modules/camera.lua
+--- @file src/sdk/client/camera.lua
 --- @description Camera state holder with support for lifecycle event hook.
 
 local _backend = require("src.engine.backend").camera

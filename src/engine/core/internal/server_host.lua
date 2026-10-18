@@ -1,5 +1,5 @@
 --- @module server_host
---- @file src/engine/core/server_host.lua
+--- @file src/engine/core/internal/server_host.lua
 --- @description Loads a game's server code and runs it on a fixed timestep, either beside the client or headless on its own.
 
 --- @section Imports
@@ -14,10 +14,8 @@ local MAX_FRAME = 0.25
 
 --- @section Initialisation
 
-local m = {}
-m.__index = m
-
---- @section Helpers
+local ServerHost = {}
+ServerHost.__index = ServerHost
 
 local sleep_ms
 
@@ -57,6 +55,8 @@ end
 
 now = now or os.clock
 
+--- @section Helpers
+
 local function file_exists(path)
     local bundle = rawget(_G, "MODIT_BUNDLE")
 
@@ -83,7 +83,7 @@ end
 --- Creates a server host
 --- @param opts table { game_dir = string, tick_rate = number, crash_log = string|nil }
 --- @return table host
-function m.new(opts)
+function ServerHost.new(opts)
     local rate = tonumber(opts.tick_rate)
     if not rate or rate <= 0 then
         if opts.tick_rate ~= nil then
@@ -108,7 +108,7 @@ end
 --- Logs a server failure, writes the crash log and stops the server
 --- @param stage string load | update | quit
 --- @param err any Error value
-function m:fail(stage, err)
+function ServerHost:fail(stage, err)
     local text = ("server %s failed:\n%s"):format(stage, tostring(err))
     _log.error(text)
 
@@ -126,7 +126,7 @@ end
 
 --- Requires game/server/init.lua and calls its load
 --- @return boolean ok
-function m:load()
+function ServerHost:load()
     local path = self.game_dir .. "/server/init.lua"
     if not file_exists(path) then
         self:fail("load", "server.enabled is true but " .. path .. " was not found")
@@ -158,7 +158,7 @@ end
 
 --- Advances the server by real elapsed time, running as many fixed ticks as fit
 --- @param dt number Seconds since the last call
-function m:step(dt)
+function ServerHost:step(dt)
     if not self.running then return end
 
     self.accumulated = math.min(self.accumulated + dt, MAX_FRAME)
@@ -176,13 +176,13 @@ function m:step(dt)
     end
 end
 
---- Stops ticking. quit is still called by m:quit
-function m:stop()
+--- Stops ticking. quit is still called by ServerHost:quit
+function ServerHost:stop()
     self.running = false
 end
 
 --- Calls the server's quit once
-function m:quit()
+function ServerHost:quit()
     self.running = false
     if self.quit_done or not self.game then return end
     self.quit_done = true
@@ -195,7 +195,7 @@ end
 
 --- Blocking loop for headless servers. Returns when stopped or crashed
 --- @param opts table|nil { should_stop = function|nil }
-function m:run(opts)
+function ServerHost:run(opts)
     opts = opts or {}
     local last = now()
 

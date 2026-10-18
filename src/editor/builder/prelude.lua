@@ -1,16 +1,18 @@
 --- @script prelude
---- @file tools/build/prelude.lua
+--- @file src/editor/builder/prelude.lua
 --- @description Runs inside a built game before the engine. Serves the embedded files, then starts the runner.
 
 --- @section Setup
 
 local bundle = MODIT_BUNDLE
 local real_loadfile = loadfile
-
--- Mirrors package.path: project root first, then the game folder
 local ROOTS = { "", "game/" }
 
---- Turns "./game\main.lua" into "game/main.lua"
+--- @section Path Helpers
+
+--- Normalise a file path to use forward slashes and remove leading "./" prefixes.
+--- @param path string Path to normalise.
+--- @return string path Normalised path.
 local function normalise(path)
     path = path:gsub("\\", "/")
     while path:sub(1, 2) == "./" do
@@ -21,7 +23,10 @@ end
 
 --- @section Embedded File Access
 
---- loadfile() that checks the embedded files first, then the disk
+--- Load a file from the embedded bundle, falling back to the filesystem.
+--- @param path string File path to load.
+--- @return function|nil chunk Compiled file chunk, or nil on failure.
+--- @return string|nil err Error message if loading fails.
 function loadfile(path, ...)
     if type(path) == "string" then
         local key = normalise(path)
@@ -34,7 +39,9 @@ function loadfile(path, ...)
     return real_loadfile(path, ...)
 end
 
---- dofile() on top of the loadfile above
+--- Execute a file using the embedded-aware loadfile implementation.
+--- @param path string File path to execute.
+--- @return any ... Values returned by the executed chunk.
 function dofile(path)
     local chunk, err = loadfile(path)
     if not chunk then
@@ -43,7 +50,11 @@ function dofile(path)
     return chunk()
 end
 
---- Finds the embedded file for a module name, or nil
+--- @section Module Resolution
+
+--- Find a module's embedded Lua file using the configured search roots.
+--- @param name string Dotted Lua module name.
+--- @return string|nil path Embedded file path, or nil if not found.
 local function find_module(name)
     local base = name:gsub("%.", "/")
 
@@ -60,7 +71,7 @@ local function find_module(name)
     end
 end
 
--- Runs before the normal file searcher, so embedded code wins over loose files
+--- Register a package loader that prioritises embedded modules over loose files.
 table.insert(package.loaders, 2, function(name)
     local file = find_module(name)
     if not file then
@@ -78,29 +89,59 @@ table.insert(package.loaders, 2, function(name)
     return chunk
 end)
 
---- @section Start
+--- @section Console Setup
+
+--- Detach the Windows console when unavailable and redirect output to a log file.
+local function setup_console()
+    local ok, ffi = pcall(require, "ffi")
+    if not ok or ffi.os ~= "Windows" then
+        return
+    end
+
+    pcall(ffi.cdef, [[
+        void* GetConsoleWindow(void);
+        void* freopen(const char* path, const char* mode, void* stream);
+    ]])
+    pcall(ffi.cdef, "int FreeConsole(void);")
+    pcall(function() ffi.C.FreeConsole() end)
+    pcall(function()
+        if ffi.C.GetConsoleWindow() == nil then
+            ffi.C.freopen("game_output.log", "w", io.stdout)
+            ffi.C.freopen("game_output.log", "a", io.stderr)
+            io.stdout:setvbuf("line")
+        end
+    end)
+end
+
+setup_console()
+
+--- @section Build Metadata
 
 local meta_source = bundle.get("@meta")
 local meta = meta_source and loadstring(meta_source)()
 
 MODIT_NAME = meta and meta.name
 
--- Server builds start headless automatically.
--- The runner recognises --server and selects its headless server path.
-if meta and meta.target == "server" then
-    local found = false
+--- @section Server Bootstrap
+
+--- Add the server flag when the embedded build targets the server and it is missing.
+local function setup_server_args()
+    if not meta or meta.target ~= "server" then
+        return
+    end
 
     for i = 1, #arg do
         if arg[i] == "--server" then
-            found = true
-            break
+            return
         end
     end
 
-    if not found then
-        arg[#arg + 1] = "--server"
-    end
+    arg[#arg + 1] = "--server"
 end
+
+setup_server_args()
+
+--- @section Runner Bootstrap
 
 local runner_source = bundle.get("src/engine/core/internal/runner.lua")
 if not runner_source then

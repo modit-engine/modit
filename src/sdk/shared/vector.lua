@@ -1,5 +1,5 @@
 --- @module vector
---- @file src/engine/sdk/shared/vector
+--- @file src/sdk/shared/vector
 --- @description Strict, instance-oriented vector math for Vec2, Vec3, and Vec4.
 
 --- @default_access mod
@@ -12,7 +12,7 @@ local EPSILON = 1e-10 -- Epsilon for floating-point comparisons
 
 local m = {}
 
---- @section Helper Functions
+--- @section Helpers
 
 local function finite_number(value, name, level)
     if type(value) ~= "number"

@@ -1,5 +1,5 @@
 --- @module scroll
---- @file src/engine/sdk/client/ui/components/scroll.lua
+--- @file src/sdk/ui/components/scroll.lua
 --- @description Stateful clip container and vertical scrollbar rendering component.
 
 --- @section Imports

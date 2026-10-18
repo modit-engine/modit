@@ -2,16 +2,26 @@
 --- @file src/engine/core/internal/runner.lua
 --- @description CLI bootstrapper. Parses environment, manages config, builds dynamic API surface via sandbox, and delegates.
 
+--- @section Constants & Package Paths
+
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local GLOBAL_NAME = "modit"
-
 local BUNDLE = rawget(_G, "MODIT_BUNDLE")
 local BUNDLED = BUNDLE ~= nil
+
+--- @section Imports
+
+local _log = require("src.engine.core.log")
+local _sandbox = require("src.engine.core.internal.sandbox")
+
+--- @section Variables
 
 local project
 local log_path
 local headless = false
+
+--- @section Argument Parsing
 
 for i = 1, #arg do
     local value = arg[i]
@@ -21,7 +31,6 @@ for i = 1, #arg do
         print("unknown flag: " .. value)
         os.exit(1)
     elseif BUNDLED then
-        -- built games ignore extra args
     elseif not project then
         project = value
     elseif not log_path then
@@ -36,6 +45,8 @@ if not project then
     os.exit(1)
 end
 
+--- @section Package Paths
+
 local GAME_DIR = project .. "/game"
 
 package.path = project .. "/?.lua;" ..
@@ -44,8 +55,21 @@ package.path = project .. "/?.lua;" ..
     GAME_DIR .. "/?/init.lua;" ..
     package.path
 
-local _log = require("src.engine.core.log")
-local _sandbox = require("src.engine.core.internal.sandbox")
+--- @section Default Config
+
+local conf = {
+    window = {
+        title = (BUNDLED and rawget(_G, "MODIT_NAME")) or project:match("([^/\\]+)[/\\]*$") or "Game",
+        size = { width = 1280, height = 720 },
+        flags = {},
+    },
+    fps = { target = 144 },
+    modules = {},
+    modding = { enabled = true, blacklisted_modules = {} },
+    server = { enabled = false, tick_rate = 30, port = 7777, server_console = true, network = true },
+}
+
+--- @section Logging
 
 local log_file = log_path and io.open(log_path, "w")
 if log_file then log_file:setvbuf("line") end
@@ -71,17 +95,7 @@ function print(...)
     emit("print", table.concat(parts, "\t"))
 end
 
-local conf = {
-    window = {
-        title = (BUNDLED and rawget(_G, "MODIT_NAME")) or project:match("([^/\\]+)[/\\]*$") or "Game",
-        size = { width = 1280, height = 720 },
-        flags = {},
-    },
-    fps = { target = 144 },
-    modules = {},
-    modding = { enabled = true, blacklisted_modules = {} },
-    server = { enabled = false, tick_rate = 30, port = 7777, server_console = true, network = true },
-}
+--- @section Configuration Helpers
 
 local function merge(base, over)
     for key, value in pairs(over) do
@@ -106,6 +120,8 @@ local function file_exists(path)
     return false
 end
 
+--- @section Configuration Loading
+
 local CONFIG_PATH = GAME_DIR .. "/config.lua"
 
 if file_exists(CONFIG_PATH) then
@@ -118,12 +134,12 @@ if file_exists(CONFIG_PATH) then
     end
 end
 
---- Build the engine-role API via the sandbox using opt-in modules
+--- @section Dynamic Engine API
+
 local function build_dynamic_engine(is_headless)
     local runtime_realm = is_headless and "server" or "client"
-
-    -- Opt-in: Collect only modules explicitly set to true
     local enabled_modules = {}
+
     if type(conf.modules) == "table" then
         for name, enabled in pairs(conf.modules) do
             if enabled == true then
@@ -137,7 +153,6 @@ local function build_dynamic_engine(is_headless)
     engine.config = conf
     engine.game_dir = GAME_DIR
     engine.project_dir = project
-    
     engine.global_name = GLOBAL_NAME
     _G[GLOBAL_NAME] = engine
 
@@ -156,7 +171,8 @@ local function build_dynamic_engine(is_headless)
     })
 end
 
---- Headless Server Execution
+--- @section Server Execution
+
 if headless then
     local server_enabled = type(conf.server) == "table" and conf.server.enabled == true
     if not server_enabled then
@@ -165,22 +181,13 @@ if headless then
         os.exit(1)
     end
 
-    local ffi_ok, ffi = pcall(require, "ffi")
-    if ffi_ok and ffi.os == "Windows" then
-        pcall(ffi.cdef, [[
-            bool AllocConsole(void);
-            void* freopen(const char* path, const char* mode, void* stream);
-        ]])
-        pcall(function()
-            ffi.C.AllocConsole()
-            ffi.C.freopen("CONOUT$", "w", io.stdout)
-            ffi.C.freopen("CONIN$", "r", io.stdin)
-            io.stdout:setvbuf("no")
-        end)
-    end
-
     local engine = build_dynamic_engine(true)
     if engine.filesystem then engine.filesystem.init(GAME_DIR) end
+    if engine.mods and conf.modding and conf.modding.enabled == true then
+        engine.mods.init(conf, GAME_DIR)
+        engine.mods.scan()
+        engine.mods.start_all("server")
+    end
 
     local server_host = require("src.engine.core.internal.server_host")
     local srv = server_host.new({
@@ -205,14 +212,16 @@ if headless then
     os.exit(srv.crashed and 1 or 0)
 end
 
---- Client Execution Delegation
-local engine = build_dynamic_engine(false)
+--- @section Client Execution
 
+local engine = build_dynamic_engine(false)
 local run = require("src.engine.core.internal.run")
 local ok, err = pcall(run.run, engine, conf)
 
 if not ok then
     _log.error(err)
 end
+
+--- @section Cleanup
 
 if log_file then log_file:close() end

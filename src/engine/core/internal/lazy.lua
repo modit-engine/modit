@@ -1,10 +1,12 @@
 --- @module lazy
---- @file src/engine/core/lazy.lua
+--- @file src/engine/core/internal/lazy.lua
 --- @description Builds a table whose entries are required on first access and cached.
 
---- @section Functions
+--- @section Initialisation
 
 local m = {}
+
+--- @section Functions
 
 --- Creates a lazy module table
 --- @param paths table Map of name to module path or helper function

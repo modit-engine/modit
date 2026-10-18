@@ -1,4 +1,5 @@
---- @file src/engine/core/version_check.lua
+--- @module version_check
+--- @file src/engine/core/internal/version_check.lua
 --- @description GitHub release version checking, including pre-releases.
 
 --- @section Imports
@@ -43,8 +44,6 @@ local function compare(a, b)
     if b_pre == "" then return -1 end
     return a_pre > b_pre and 1 or -1
 end
-
--- Export compare so external modules can use it
 m.compare = compare
 
 local function newest(releases)

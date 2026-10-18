@@ -1,5 +1,5 @@
 --- @module command
---- @file src/engine/modules/command.lua
+--- @file src/sdk/shared/command.lua
 --- @description Console command registry with engine, game, and mod layers, plus optional built-ins.
 
 --- @section Imports
@@ -11,7 +11,7 @@ local _log = require("src.engine.core.log")
 local m = {}
 local registry = {} -- name -> { fn, help, layer, owner }
 
---- @section Helper Functions
+--- @section Helpers
 
 local function describe(command)
     if command.layer == "mod" then return "mod " + command.owner end

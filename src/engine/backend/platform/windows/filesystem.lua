@@ -49,7 +49,7 @@ local find_data_buffer = _ffi.new("WIN32_FIND_DATAA")
 
 local m = {}
 
---- @section Helper Functions
+--- @section Helpers
 
 local function is_safe_path(path)
     if type(path) ~= "string" or path == "" or path == "." then return false end

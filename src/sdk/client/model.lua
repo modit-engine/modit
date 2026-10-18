@@ -1,5 +1,5 @@
 --- @module model
---- @file src/engine/sdk/client/model.lua
+--- @file src/sdk/client/model.lua
 --- @description Model assets, Lua assemblies, animation, materials and world bounds.
 
 --- @section Imports

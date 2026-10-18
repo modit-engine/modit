@@ -1,5 +1,5 @@
 --- @module splitter
---- @file src/engine/sdk/client/ui/components/splitter.lua
+--- @file src/sdk/ui/components/splitter.lua
 --- @description Resizable UI panel divider component supporting mouse drag interactions along horizontal and vertical axes.
 
 --- @section Imports

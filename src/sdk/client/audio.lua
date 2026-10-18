@@ -1,5 +1,5 @@
 --- @module audio
---- @file src/engine/sdk/client/audio.lua
+--- @file src/sdk/client/audio.lua
 --- @description Sound effect and music handles, plus global music controls. Needs modules.audio = true in the run config.
 
 --- @section Imports

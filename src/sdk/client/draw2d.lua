@@ -1,5 +1,5 @@
 --- @module draw2d
---- @file src/engine/api/client/draw2d.lua
+--- @file src/sdk/client/draw2d.lua
 --- @description 2D drawing: shapes, colour state, text and scissor clipping.
 
 --- @section Imports

@@ -57,9 +57,11 @@ engine.string = require("src.sdk.shared.string")
 engine.table = require("src.sdk.shared.table")
 engine.timestamp = require("src.sdk.shared.timestamp")
 
+-- Network
+engine.network = require("src.sdk.shared.network")
+
 --- Server Modules
 engine.server_console = require("src.sdk.server.console")
-engine.network = require("src.sdk.server.network")
 
 --- @section Functions
 

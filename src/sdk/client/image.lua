@@ -1,5 +1,5 @@
 --- @module image
---- @file src/engine/modules/image.lua
+--- @file src/sdk/client/image.lua
 --- @description Object-oriented image and sprite handle: loading, drawing, and animation frame handling.
 
 --- @section Imports
@@ -14,7 +14,7 @@ Image.__index = Image
 
 local cache = {}
 
---- @section Helper Functions
+--- @section Helpers
 
 local function tint_values(tint)
     if not tint then return 255, 255, 255, 255 end

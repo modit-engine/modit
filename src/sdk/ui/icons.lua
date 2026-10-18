@@ -37,9 +37,7 @@ local function encode_utf8(codepoint)
     elseif codepoint < 0x800 then
         return string.char(0xC0 + math.floor(codepoint / 64), 0x80 + codepoint % 64)
     else
-        return string.char(0xE0 + math.floor(codepoint / 4096),
-                           0x80 + math.floor(codepoint / 64) % 64,
-                           0x80 + codepoint % 64)
+        return string.char(0xE0 + math.floor(codepoint / 4096), 0x80 + math.floor(codepoint / 64) % 64, 0x80 + codepoint % 64)
     end
 end
 

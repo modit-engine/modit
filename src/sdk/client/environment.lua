@@ -1,6 +1,7 @@
 --- @module environment
 --- @file src/sdk/client/environment.lua
---- @description Scene environment in one flat API: lighting, fog and shadows, sky, post-processing and water. Lighting is applied automatically by camera:begin_3d.
+--- @description Scene environment in one flat API: lighting, fog and shadows, sky, post-processing and water.
+--- Lighting is applied automatically by camera:begin_3d.
 
 --- @section Imports
 

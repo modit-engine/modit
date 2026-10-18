@@ -16,11 +16,11 @@ local MANIFEST = {
         vector = "src/sdk/shared/vector.lua",
         runtime = "src/sdk/shared/runtime.lua",
         physics = "src/sdk/shared/physics.lua",
-        mods = "src/engine/core/internal/mod_manager.lua"
+        mods = "src/engine/core/internal/mod_manager.lua",
+        network = "src/sdk/shared/network.lua"
     },
     server = {
-        server_console = "src/sdk/server/console.lua",
-        network = "src/sdk/server/network.lua"
+        server_console = "src/sdk/server/console.lua"
     },
     client = {
         audio = "src/sdk/client/audio.lua",
@@ -53,7 +53,7 @@ m.manifest = MANIFEST
 
 local real_getmetatable = getmetatable
 
---- @section Helper Functions
+--- @section Helpers
 
 local function rank_of(role)
     local rank = ROLE_RANK[role]

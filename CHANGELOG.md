@@ -1,9 +1,27 @@
+# v0.12.0
+
+Raylib 6.2 & Some tweaks.
+
+- Moved over vendor dll to raylib 6.2: https://github.com/raysan5/raylib/releases/tag/6.2
+- Added `network` & `server_console` module toggles -- planning to rework how modules are handled maybe make them opt-in instead of opt-out by default?
+- `network.lua` moved to shared location correctly and is now served to client/server.
+- Note clean up and organisation standardisation throughout
+- Mods are now served to server correctly
+
+Notes:
+- Noticed a couple small editor bugs: search input doesnt let you type anymore & highlighting a block and tabbing deletes the block. Both are mostly none important will fix asap, for now working on a few small game projects to test out the systems which is a little more important.
+
 # v0.11.2
 
 More Functions & Tweaks
 
 - Physics module now handles joints.
 - Missing @default_access tags added to files
+- Added `def.updateBodyMass = true` to physics objects
+- Changes to raylib back end model loading, models now load from the correct path.
+- `get_position` function added to window
+- Small changes to `run`. `runner`, `sandbox`.
+- Added access metadata to hooks.
 
 # v0.11.1 
 

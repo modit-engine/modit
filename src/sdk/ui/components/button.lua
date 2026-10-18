@@ -1,5 +1,5 @@
 --- @module ui.components.button
---- @file src/engine/sdk/client/ui/components/button.lua
+--- @file src/sdk/ui/components/button.lua
 --- @description Unified interactive button component supporting text, icons, custom radii, and styling.
 
 --- @section Imports

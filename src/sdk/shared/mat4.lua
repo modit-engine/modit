@@ -16,7 +16,7 @@ local EPSILON = 1e-10
 local mat4 = {}
 mat4.__index = mat4
 
---- @section Helper Functions
+--- @section Helpers
 
 local function is_number(v)
     return type(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge

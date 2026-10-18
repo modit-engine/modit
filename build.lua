@@ -1,5 +1,5 @@
---- @file runner
---- @description Just a stub, allows for `luajit runner.lua <path>` instead of having to use `luajit src/engine/core/internal/runner.lua`
+--- @file build
+--- @description Just a stub, allows for `luajit build.lua <project> [options]` instead of having to use `luajit src/editor/builder/build.lua`
 
 package.path = "./?.lua;./?/init.lua;" .. package.path
 require("src.editor.builder.build")

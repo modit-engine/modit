@@ -1,5 +1,5 @@
 --- @module panel
---- @file src/engine/sdk/client/ui/components/panel.lua
+--- @file src/sdk/ui/components/panel.lua
 --- @description Dock panel container component with background, borders, and optional title header.
 
 --- @section Imports

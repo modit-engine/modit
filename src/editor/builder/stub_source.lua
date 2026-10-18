@@ -1,5 +1,5 @@
 --- @script stub_source
---- @file tools/build/stub_source.lua
+--- @file src/editor/builder/stub_source.lua
 --- @description C source of the game launcher stub, kept as a Lua string so the repo stays 100% Lua.
 --- build.lua writes this to a temp folder and compiles it once, then caches the exe in src/bin.
 

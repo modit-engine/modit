@@ -1,5 +1,5 @@
 --- @module hook
---- @file src/engine/sdk/shared/hook.lua
+--- @file src/sdk/shared/hook.lua
 --- @description Event hook system. Listeners can be tagged with an owner so a whole mod can be unhooked at once.
 
 --- @section Imports

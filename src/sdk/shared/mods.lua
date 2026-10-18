@@ -1,5 +1,5 @@
 --- @module mods
---- @file src/engine/sdk/shared/mods.lua
+--- @file src/sdk/shared/mods.lua
 --- @description Safe read-only mod querying API for game and mod environments.
 
 --- @section Initialisation

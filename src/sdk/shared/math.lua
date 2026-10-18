@@ -12,7 +12,7 @@ local EPSILON = 1e-10 -- Epsilon for floating-point comparisons
 
 local m = {}
 
---- @section Helper Functions
+--- @section Helpers
 
 local function validate_finite(value, name)
     if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then

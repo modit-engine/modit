@@ -59,12 +59,14 @@ return {
         mat4 = true,
         math = true,
         mods = true,
+        network = true,
         physics = true,
         runtime = true,
         string = true,
         table = true,
         timestamp = true,
         vector = true,
+        server_console = true,
 
         -- UI Framework
         ui = true
@@ -80,9 +82,7 @@ return {
     server = {
         enabled = false,
         tick_rate = 30,
-        port = 7777,
-        server_console = true,
-        network = true,
+        port = 7777
     }
 }
 ]]

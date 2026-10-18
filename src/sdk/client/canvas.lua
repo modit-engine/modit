@@ -1,5 +1,5 @@
 --- @module canvas
---- @file src/engine/sdk/client/canvas.lua
+--- @file src/sdk/client/canvas.lua
 --- @description Offscreen render target handle: drawing into it, stretched and letterboxed display, and screen to canvas coordinate mapping.
 
 --- @section Imports

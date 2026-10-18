@@ -2,8 +2,33 @@
 --- @file src/engine/core/internal/run.lua
 --- @description Client loop manager. Initializes window, runs lifecycle ticks, and manages rendering.
 
+--- @section Imports
+
 local _sandbox = require("src.engine.core.internal.sandbox")
+
+--- @section Initalisation
+
 local m = {}
+
+local ffi = require("ffi")
+pcall(ffi.cdef, "int GetSystemMetrics(int index);")
+
+local position_checks = 0
+
+--- @section Helpers
+
+local function ensure_window_on_screen(engine)
+    local ok, x, y = pcall(engine.window.get_position)
+    if not ok or type(x) ~= "number" or type(y) ~= "number" then return end
+
+    local w, h = engine.window.get_size()
+    local screen_w, screen_h = ffi.C.GetSystemMetrics(0), ffi.C.GetSystemMetrics(1)
+    local off_screen = x > screen_w - 50 or x < -w + 50 or y > screen_h - 50 or y < -h + 50
+    if not off_screen then return end
+
+    engine.window.set_position(math.max(0, (screen_w - w) / 2), math.max(0, (screen_h - h) / 2))
+    engine.log.info(("window was off-screen at %d,%d, recentred"):format(x, y))
+end
 
 local function draw_crash(engine, crash_lines)
     local draw = engine.draw or engine.draw2d
@@ -53,6 +78,11 @@ local function load_game(engine, conf)
     return result
 end
 
+--- @section Functions
+
+--- Handles running game/engine files
+--- @param engine table Engine api loaded in engine/init.lua
+--- @param conf table Engine/game configuration file
 function m.run(engine, conf)
     engine.window.init(conf.window, conf.modules)
     
@@ -106,11 +136,13 @@ function m.run(engine, conf)
 
         for name in pairs(tickable_modules) do
             local mod = engine[name]
-            -- Check strict opt-in (= true)
             if modules_cfg[name] == true and type(mod) == "table" and type(mod.update) == "function" then
                 mod.update(frame_dt)
             end
         end
+
+        position_checks = position_checks + 1
+        if position_checks == 2 or position_checks == 30 then ensure_window_on_screen(engine) end
 
         if game.update then game.update(frame_dt) end
     end

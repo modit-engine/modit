@@ -1,5 +1,5 @@
 --- @module draw3d
---- @file src/engine/api/client/draw3d.lua
+--- @file src/sdk/client/draw3d.lua
 --- @description 3D drawing: shapes and grid rendering. Only works between camera:begin_3d and camera:end_3d.
 
 --- @section Imports

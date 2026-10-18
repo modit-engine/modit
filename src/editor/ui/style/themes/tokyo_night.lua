@@ -1,5 +1,5 @@
 --- @module tokyo_night
---- @file src/engine/ui/themes/tokyo_night.lua
+--- @file src/sdk/ui/themes/tokyo_night.lua
 --- @description Defines Tokyo Night engine UI theme palette, borders, shadows, console log colors, and syntax highlighting styles.
 
 --- @section Theme

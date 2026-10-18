@@ -1,5 +1,5 @@
---- @module default
---- @file src/engine/ui/themes/default.lua
+--- @module default_theme
+--- @file src/sdk/ui/default_theme.lua
 --- @description Defines default UI theme palette, borders, shadows, console log colors, and syntax highlighting styles.
 
 --- @section Theme

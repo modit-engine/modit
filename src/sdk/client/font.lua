@@ -1,5 +1,5 @@
 --- @module font
---- @file src/engine/modules/font.lua
+--- @file src/sdk/client/font.lua
 --- @description Object-oriented font handle: loading, glyph caching, text measurement, and rendering.
 
 local _backend = require("src.engine.backend").font
@@ -11,8 +11,6 @@ local _draw = require("src.sdk.client.draw2d")
 --- @field cell_w number Average character cell width
 local Font = {}
 Font.__index = Font
-
---- Default fallback font path
 Font.default_path = "src/engine/assets/fonts/JetBrainsMono-Regular.ttf"
 
 --- Internal cache mapping path -> size -> Font instance

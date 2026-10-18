@@ -1,5 +1,5 @@
 --- @module theme
---- @file src/engine/ui/theme.lua
+--- @file src/sdk/ui/theme.lua
 --- @description Theme registry and active theme state for engine UI. Ships with the default theme.
 
 --- @section Imports
