@@ -8,7 +8,7 @@
 local IS_WINDOWS = package.config:sub(1, 1) == "\\"
 local MAGIC = "MODITPK1"
 local STUB_NAME = "modit_stub.exe"
-local SHARED_DLLS = { "lua51.dll", "box3d.dll" }
+local SHARED_DLLS = { "luajit.dll", "box3d.dll" }
 local CLIENT_DLLS = { "raylib.dll" }
 local SERVER_DLLS = {}
 
@@ -249,7 +249,7 @@ local function build_stub(cache_path)
     emit("info", "Compiling the launcher stub (one time only)...")
 
     local include = os.getenv("LUA_INCLUDE") or "C:\\luajit\\src"
-    local library = os.getenv("LUA_LIB") or "C:\\luajit\\src\\lua51.lib"
+    local library = os.getenv("LUA_LIB") or "C:\\luajit\\src\\luajit.lib"
     local executable = (arg[-1] or ""):gsub("\\", "/")
     local install_root = executable:match("^(.*)/bin/[^/]+$")
     if install_root then
@@ -257,12 +257,12 @@ local function build_stub(cache_path)
             include = install_root .. "/include"
         end
         if not os.getenv("LUA_LIB") and not read_file(library) then
-            library = install_root .. "/lib/lua51.lib"
+            library = install_root .. "/lib/luajit.lib"
         end
     end
     if not read_file(include .. "/lua.h") or not read_file(library) then
         fail("LuaJIT development files were not found. Set LUA_INCLUDE to the folder containing lua.h "
-            .. "and LUA_LIB to lua51.lib. Checked: " .. include .. " and " .. library)
+            .. "and LUA_LIB to luajit.lib. Checked: " .. include .. " and " .. library)
     end
 
     local temp = (os.getenv("TEMP") or ".") .. "\\modit_build"

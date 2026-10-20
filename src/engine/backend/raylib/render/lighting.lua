@@ -401,6 +401,7 @@ local active = false
 local in_shadow = false
 local in_map = false
 local receiving = false
+local warned_unlit = false
 
 local lit = { vertex = VERTEX, fragment = FRAGMENT, uniforms = LIT_UNIFORMS, probe = "sun_dir" }
 local lit_mesh = { vertex = MESH_VERTEX, fragment = MESH_FRAGMENT, uniforms = MESH_UNIFORMS, probe = "sun_dir", map_uniform = "shadowMap" }
@@ -409,7 +410,7 @@ local instanced_vertex = MESH_VERTEX:gsub("uniform mat4 matModel;", "in mat4 ins
     :gsub("mat3%(matNormal%)", "transpose(inverse(mat3(instanceTransform)))")
     :gsub("matModel", "instanceTransform")
     :gsub("gl_Position = mvp %* vec4%(vertexPosition, 1.0%);", "gl_Position = mvp * instanceTransform * vec4(vertexPosition, 1.0);")
-local lit_instanced = { vertex = instanced_vertex, fragment = MESH_FRAGMENT, uniforms = MESH_UNIFORMS,
+local lit_instanced = { vertex = instanced_vertex, fragment = FRAGMENT, uniforms = MESH_UNIFORMS,
     probe = "sun_dir", map_uniform = "shadowMap" }
 local shadow = { vertex = SHADOW_VERTEX, fragment = SHADOW_FRAGMENT, uniforms = SHADOW_UNIFORMS, probe = "sun_world" }
 local shadow_mesh = { vertex = SHADOW_MESH_VERTEX, fragment = mesh_shadow_fragment(SHADOW_FRAGMENT), uniforms = SHADOW_UNIFORMS, probe = "sun_world" }
@@ -472,8 +473,12 @@ local function ensure(program)
     end
     if program == lit_mesh or program == lit_instanced then
         loaded.locs[20] = _lib.GetShaderLocation(loaded, "texture5") -- SHADER_LOC_MAP_EMISSION
+        loaded.locs[1] = _lib.GetShaderLocation(loaded, "colDiffuse") -- SHADER_LOC_COLOR_DIFFUSE (CRITICAL)
     end
-    if program == lit_instanced then loaded.locs[9] = _lib.GetShaderLocationAttrib(loaded, "instanceTransform") end
+    if program == lit_instanced then 
+        local attrib_loc = _lib.GetShaderLocationAttrib(loaded, "instanceTransform")
+        loaded.locs[9] = attrib_loc
+    end
     if program.map_uniform then
         loaded.locs[MAP_BRDF_LOC] = _lib.GetShaderLocation(loaded, program.map_uniform)
     end
@@ -742,8 +747,17 @@ return {
     shadow_end = shadow_end,
     mesh_shader = mesh_shader,
     instance_shader = function()
-        -- Other passes keep the existing path, including shadow maps and projected shadows.
-        if active and not in_shadow and not in_map and not receiving then return lit_instanced.shader end
+        if not (ensure(lit_instanced) and lit_instanced.shader) then
+            return lit_mesh.shader
+        end
+        if not active then
+            if not warned_unlit then
+                warned_unlit = true
+                print("[lighting] instanced draw outside a lit 3D pass: using neutral lighting and no fog")
+            end
+            upload_lit(lit_instanced, 0.3, -0.8, -0.5, 0.8, 0.8, 0.8, 0.45, 0.45, 0.45, 1e5, 1e6, 0.5, 0.5, 0.5)
+        end
+        return lit_instanced.shader
     end,
     set_local_lights = function(lights, blockers)
         local_sources, local_blockers = lights, blockers

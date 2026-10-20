@@ -1,0 +1,6 @@
+engine=modit
+name=test_plugin
+label=Test Plugin
+version=1.0.0
+author=Case
+entry=init.lua

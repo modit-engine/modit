@@ -9,6 +9,8 @@ local _ui = require("src.editor.ui")
 local _session = require("src.editor.core.session")
 local _settings = require("src.editor.core.settings")
 local _toolbar = require("src.editor.ui.panels.toolbar")
+local _plugins = require("src.editor.core.plugins")
+_plugins.load_all()
 
 --- @section Engine UI
 
@@ -69,6 +71,7 @@ end
 --- @param delta_time number Delta time in seconds
 function m.update(delta_time)
     _session.update(delta_time)
+    _engine_ui.update_toasts(delta_time)
     _ui.panels.code.update()
 end
 
@@ -124,8 +127,8 @@ function m.draw()
         panel_sizes.bottom = _engine_ui.splitter(regions.bottom.x, regions.bottom.y - SPLIT_HANDLE_SIZE / 2, regions.bottom.w, SPLIT_HANDLE_SIZE, "y", panel_sizes.bottom, -1)
     end
 
-    -- Draw toolbar and modals last so their mouse/dropdown inputs take top priority
     _toolbar.draw(regions.toolbar, active_theme)
+    _engine_ui.draw_toasts(window_w, window_h)
     _engine_ui.draw_modal(window_w, window_h)
     _input.set_blocked(false)
 end

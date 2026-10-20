@@ -54,4 +54,10 @@ return {
     close_modal = function(...) return require(UI .. ".overlays.modal").close(...) end,
     is_modal_open = function(...) return require(UI .. ".overlays.modal").is_open(...) end,
     draw_modal = function(...) return require(UI .. ".overlays.modal").draw(...) end,
+
+    -- Toast Notifications
+    push_toast = function(...) return require(UI .. ".overlays.toast").push(...) end,
+    clear_toasts = function(...) return require(UI .. ".overlays.toast").clear(...) end,
+    update_toasts = function(...) return require(UI .. ".overlays.toast").update(...) end,
+    draw_toasts = function(...) return require(UI .. ".overlays.toast").draw(...) end,
 }

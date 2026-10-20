@@ -33,6 +33,7 @@ local RESCAN_EVERY = 1
 local HDR_BTN = 22
 local NAME_FILTER = "[%w_%-%.]"
 local DRAG_THRESHOLD = 4
+local DOUBLE_CLICK_TIME = 0.3
 
 --- @section Initialisation
 
@@ -55,6 +56,8 @@ local tree_row_count = 0
 local edit_state = nil
 local import_notice, import_until
 local drag = nil
+local last_click_path = nil
+local last_click_time = 0
 
 --- @section Helpers
 
@@ -470,8 +473,18 @@ function m.draw(viewport)
                 end
 
                 if is_hovered and is_pressed then
-                    selected_path, is_selected_dir = tree_row.path, tree_row.dir
-                    drag = { path = tree_row.path, name = tree_row.name, dir = tree_row.dir, sx = mouse_x, sy = mouse_y, active = false }
+                    local current_time = os.clock()
+                    if selected_path == tree_row.path and last_click_path == tree_row.path and (current_time - last_click_time) <= DOUBLE_CLICK_TIME then
+                        begin_rename()
+                        last_click_path = nil
+                        last_click_time = 0
+                        drag = nil
+                    else
+                        selected_path, is_selected_dir = tree_row.path, tree_row.dir
+                        last_click_path = tree_row.path
+                        last_click_time = current_time
+                        drag = { path = tree_row.path, name = tree_row.name, dir = tree_row.dir, sx = mouse_x, sy = mouse_y, active = false }
+                    end
                 end
             end
         end
@@ -479,6 +492,7 @@ function m.draw(viewport)
 
     if is_pressed and not hit_row and not edit_state and _ui_input.in_rect(panel_x, panel_y, panel_w, panel_h) then
         selected_path, is_selected_dir = nil, false
+        last_click_path = nil
     end
 
     _ui.scroll_finish()

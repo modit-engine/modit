@@ -23,7 +23,7 @@ modit.run({
         icon = "src/engine/assets/branding/modit_icon_32x32.png",
         console = false,
         size = { width = 1600, height = 900 },
-        fps = { draw = false, target = false },
+        fps = { draw = false, target = 500 },
         flags = { maximized = true, resizable = true }
     },
 

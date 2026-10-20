@@ -216,6 +216,7 @@ modit.model.build({ key, vertices, indices?, uvs?, colours?, normals? }) -- Buil
 modit.model.load_asset({ key, path, base_dir?, replace?, combine_vox_colours? }) -- Loads a Lua asset description or VOX scene; description references are relative to its folder. [mod]
 modit.model.draw({ key, x?, y?, z?, scale?, angle?, axis?, pivot?, tint? }) -- Draws an asset or instance; call inside a 3D camera pass. [mod]
 modit.model.draw_many(instances, camera) -- Draws models with opaque batching and back-to-front blended parts. [mod]
+modit.model.draw_bulk(key, instances, count?, camera?, colour?, uniform?) -- Draws many simple { x, y, z, scale?, colour? } instances of a model in a few instanced calls; one draw call per distinct colour. [mod]
 modit.model.create_instance({ key, ... }) -- Creates an editable transform/tint instance for a loaded asset. [mod]
 modit.model.attach(parent, name, child) -- Attaches a named child instance. [mod]
 modit.model.detach(parent, name) -- Detaches a named child and returns it. [mod]
@@ -292,6 +293,10 @@ modit.ui.open_modal(opts) -- Opens a modal confirmation/input dialog. [mod]
 modit.ui.close_modal() -- Closes the active modal. [mod]
 modit.ui.is_modal_open() -- Returns true if a modal is currently open. [mod]
 modit.ui.draw_modal(w, h) -- Renders the active modal overlay and processes input. [mod]
+modit.ui.push_toast(message, type_or_opts?) -- Pushes a new floating toast notification onto the queue with an optional style type ("info", "success", "error") or options table. [mod]
+modit.ui.clear_toasts() -- Clears all active toast notifications. [mod]
+modit.ui.update_toasts(dt) -- Updates active toast notification timers based on frame delta time. [mod]
+modit.ui.draw_toasts(w, h) -- Renders active toast notifications stacked in the bottom-right corner of the screen. [mod]
 
 ```
 

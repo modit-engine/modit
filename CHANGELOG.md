@@ -1,3 +1,16 @@
+# v0.13.0
+
+Plugin Support & Fixes
+
+- Basic plugin support added to editor you can load, enable/disable and remove plugins; plugins receive the full engine api as `modit.` just like game + mod development
+- Added small `plugin-development.md` into `.docs`
+- Fixed typing in find and replace input and refactored file to line up with others
+- Explorer now supports double clicking files to rename
+- Engine raylib backend now supports bulk drawing `draw_bulk(...)`
+- Added new `toasts` module into UI
+- Small change to toolbar buttons to add a space between menu + actions, and remove borders
+- Added some missing doc comments
+
 # v0.12.0
 
 Raylib 6.2 & Some tweaks.

@@ -30,6 +30,10 @@ local draw_tint = _ffi.new("Color")
 
 local transform_matrix = _ffi.new("Matrix")
 local transform_floats = _ffi.cast("float*", transform_matrix)
+local DEFAULT_SCALE = 0.8
+local WHITE = { 255, 255, 255, 255 }
+
+local transform_buffer, transform_capacity = nil, 0
 
 --- @section Initialisation
 
@@ -61,8 +65,6 @@ local function allocate(type_name, count)
     return _ffi.cast(type_name .. "*", pointer)
 end
 
--- UnloadModel frees buffers and maps, not textures or shaders. Assets own their textures;
--- the public API never accepts native handles, so assets cannot accidentally share ownership.
 local function release_native(native_model)
     local default_texture = get_default_material().maps[0].texture.id
     local released = {}
@@ -132,11 +134,10 @@ local function inspect_model(native_model)
     return { min = minimum, max = maximum }
 end
 
---- Detects texture alpha once per asset/update, so auto mode preserves textured transparency
 local function texture_has_alpha(texture)
     if texture.id == 0 or texture.id == get_default_material().maps[0].texture.id then return false end
     local image = _lib.LoadImageFromTexture(texture)
-    if image.data == nil then return true end -- Unknown formats are treated conservatively.
+    if image.data == nil then return true end
     local colours = _lib.LoadImageColors(image)
     local transparent = colours == nil
     if colours ~= nil then
@@ -221,24 +222,60 @@ local function resolve(path)
     return dir and (dir .. "/" .. path) or path
 end
 
---- Reads VOX authoring data through the Lua scene importer, retaining named parts
---- @param path string VOX file path
---- @return table|nil definition Portable asset description
---- @return string|nil reason
-function m.read_vox(path, combine_colours)
-    local file, reason = io.open(path, "rb")
-    if not file then return nil, reason end
-    local size = file:seek("end")
-    if not size or size > 268435456 then file:close(); return nil, "VOX file exceeds size limit" end
-    file:seek("set", 0)
-    local source = file:read("*a")
-    file:close()
-    return require("src.engine.core.internal.vox").decode(source, combine_colours)
+local function transforms_for(count)
+    if count > transform_capacity then
+        transform_buffer = _ffi.new("Matrix[?]", count)
+        for i = 0, count - 1 do transform_buffer[i].m15 = 1.0 end
+        transform_capacity = count
+    end
+    return transform_buffer
 end
 
---- @section Model Lifecycle
+local function to_byte(value)
+    value = tonumber(value) or 255
+    return math.max(0, math.min(255, math.floor(value + 0.5)))
+end
 
--- Check containers before calling native parsers. This is not a hostile-file sandbox.
+local function colour_bytes(colour)
+    return to_byte(colour[1]), to_byte(colour[2]), to_byte(colour[3]), to_byte(colour[4])
+end
+
+local function fill_transforms(buffer, list, count)
+    for i = 0, count - 1 do
+        local instance = list[i + 1]
+        local t = buffer[i]
+        local scale = instance.scale or DEFAULT_SCALE
+
+        t.m0, t.m5, t.m10 = scale, scale, scale
+        t.m12, t.m13, t.m14 = instance.x, instance.y, instance.z
+    end
+end
+
+local function has_colours(instances, count)
+    for i = 1, count do
+        if instances[i].colour then return true end
+    end
+    return false
+end
+
+local function group_by_colour(instances, count, fallback)
+    local by_key, groups = {}, {}
+    for i = 1, count do
+        local instance = instances[i]
+        local r, g, b, a = colour_bytes(instance.colour or fallback)
+        local key = ((r * 256 + g) * 256 + b) * 256 + a
+        local group = by_key[key]
+        if not group then
+            group = { r = r, g = g, b = b, a = a, list = {}, n = 0 }
+            by_key[key] = group
+            groups[#groups + 1] = group
+        end
+        group.n = group.n + 1
+        group.list[group.n] = instance
+    end
+    return groups
+end
+
 local function check_model_file(path)
     local file, reason = io.open(path, "rb")
     if not file then return false, reason end
@@ -293,6 +330,112 @@ local function check_model_file(path)
     return true
 end
 
+local function matrix_values(matrix)
+    local values = {}
+    for index = 0, 15 do values[index + 1] = tonumber(matrix["m" .. index]) end
+    return values
+end
+
+local function transform_point(matrix, x, y, z)
+    return matrix.m0 * x + matrix.m4 * y + matrix.m8 * z + matrix.m12,
+        matrix.m1 * x + matrix.m5 * y + matrix.m9 * z + matrix.m13,
+        matrix.m2 * x + matrix.m6 * y + matrix.m10 * z + matrix.m14
+end
+
+local function valid_transform(transform)
+    for _, field in ipairs({ "translation", "scale" }) do
+        local vector = transform[field]
+        if not finite(vector.x) or not finite(vector.y) or not finite(vector.z) then return false end
+    end
+    local rotation = transform.rotation
+    return finite(rotation.x) and finite(rotation.y) and finite(rotation.z) and finite(rotation.w)
+        and rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w > 0
+        and transform.scale.x ~= 0 and transform.scale.y ~= 0 and transform.scale.z ~= 0
+end
+
+local function check_animation_root(path)
+    local extension = path:match("%.([^./\\]+)$")
+    if not extension or (extension:lower() ~= "gltf" and extension:lower() ~= "glb") then return true end
+    local file, reason = io.open(path, "rb")
+    if not file then return false, reason end
+    local source
+    if extension:lower() == "glb" then
+        local header = file:read(20)
+        local function uint32(offset)
+            local a, b, c, d = header:byte(offset, offset + 3)
+            return a + b * 256 + c * 65536 + d * 16777216
+        end
+        if not header or #header ~= 20 or header:sub(1, 4) ~= "glTF" or header:sub(17, 20) ~= "JSON"
+            or uint32(5) ~= 2 or uint32(13) > uint32(9) - 20 then
+            file:close()
+            return false, "invalid GLB animation header"
+        end
+        source = file:read(uint32(13))
+    else
+        source = file:read("*a")
+    end
+    file:close()
+    local ok, document = pcall(_json.decode, source)
+    if not ok or type(document) ~= "table" then return false, "invalid glTF animation JSON" end
+    local skin = type(document.skins) == "table" and document.skins[1]
+    local root = type(skin) == "table" and type(skin.joints) == "table" and skin.joints[1]
+    if type(root) ~= "number" or type(document.nodes) ~= "table" or not document.nodes[root + 1] then
+        return false, "glTF animation needs a skeleton"
+    end
+    for _, node in ipairs(document.nodes) do
+        if type(node) == "table" and type(node.children) == "table" then
+            for _, child in ipairs(node.children) do
+                if child == root then return true end
+            end
+        end
+    end
+    return false, "bundled Raylib requires the skeleton root beneath an armature/parent node; re-export with that parent"
+end
+
+local function alpha_mode(asset, material_index, alpha)
+    local settings = asset.materials[material_index + 1]
+    local mode = settings.alpha_mode
+    if mode == "mask" then return 1 end
+    if mode == "blend" then return 2 end
+    if mode == "auto" and (alpha < 255 or asset.native.materials[material_index].maps[0].color.a < 255 or settings.texture_alpha or settings.vertex_alpha) then return 2 end
+    return 0
+end
+
+local function bind_materials(model)
+    local shader = _lighting.mesh_shader()
+    if shader == false then return false end
+    shader = shader or get_default_material().shader
+
+    local shadow_texture = _lighting.shadow_texture()
+    for index = 0, model.materialCount - 1 do
+        local material = model.materials[index]
+        material.shader = shader
+        if shadow_texture then
+            material.maps[SHADOW_MAP_SLOT].texture = shadow_texture
+        else
+            material.maps[SHADOW_MAP_SLOT].texture.id = 0
+        end
+    end
+    return true
+end
+
+--- @section Functions
+
+--- Reads VOX authoring data through the Lua scene importer, retaining named parts
+--- @param path string VOX file path
+--- @return table|nil definition Portable asset description
+--- @return string|nil reason
+function m.read_vox(path, combine_colours)
+    local file, reason = io.open(path, "rb")
+    if not file then return nil, reason end
+    local size = file:seek("end")
+    if not size or size > 268435456 then file:close(); return nil, "VOX file exceeds size limit" end
+    file:seek("set", 0)
+    local source = file:read("*a")
+    file:close()
+    return require("src.engine.core.internal.vox").decode(source, combine_colours)
+end
+
 --- Loads and validates a static model from disk
 --- @param path string Model file path
 --- @return table|nil asset Backend-owned model asset
@@ -341,15 +484,13 @@ function m.build(vertices, indices, uvs, colours, normals)
         return nil, tostring(reason)
     end
 
-    -- Assemble the container in Lua so every engine-owned allocation can be checked and
-    -- rolled back. LoadModelFromMesh internally allocates unchecked native arrays.
     local native_model = _ffi.new("Model")
     native_model.transform.m0, native_model.transform.m5 = 1, 1
     native_model.transform.m10, native_model.transform.m15 = 1, 1
     ok, reason = pcall(function()
         native_model.meshes = allocate("Mesh", 1)
         native_model.meshes[0] = mesh
-        native_model.meshCount = 1 -- Ownership of mesh buffers has transferred.
+        native_model.meshCount = 1
         native_model.materials = allocate("Material", 1)
         native_model.materialCount = 1
         native_model.materials[0].shader = get_default_material().shader
@@ -380,24 +521,9 @@ end
 function m.cleanup()
     for asset in pairs(live_assets) do m.free(asset) end
     if default_material then
-        -- Shader/white texture belong to Raylib. Only the maps array belongs to us.
         _lib.MemFree(default_material.maps)
         default_material = nil
     end
-end
-
---- @section Animation Assets & Poses
-
-local function matrix_values(matrix)
-    local values = {}
-    for index = 0, 15 do values[index + 1] = tonumber(matrix["m" .. index]) end
-    return values
-end
-
-local function transform_point(matrix, x, y, z)
-    return matrix.m0 * x + matrix.m4 * y + matrix.m8 * z + matrix.m12,
-        matrix.m1 * x + matrix.m5 * y + matrix.m9 * z + matrix.m13,
-        matrix.m2 * x + matrix.m6 * y + matrix.m10 * z + matrix.m14
 end
 
 --- Copies animation descriptions; frame timing is supplied by the caller
@@ -413,58 +539,6 @@ function m.get_animations(asset)
         }
     end
     return clips
-end
-
-local function valid_transform(transform)
-    for _, field in ipairs({ "translation", "scale" }) do
-        local vector = transform[field]
-        if not finite(vector.x) or not finite(vector.y) or not finite(vector.z) then return false end
-    end
-    local rotation = transform.rotation
-    return finite(rotation.x) and finite(rotation.y) and finite(rotation.z) and finite(rotation.w)
-        and rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w > 0
-        and transform.scale.x ~= 0 and transform.scale.y ~= 0 and transform.scale.z ~= 0
-end
-
--- The bundled Raylib glTF animation loader dereferences the first joint's parent.
--- Reject parentless skeleton roots before entering native code (also applies to GLB).
-local function check_animation_root(path)
-    local extension = path:match("%.([^./\\]+)$")
-    if not extension or (extension:lower() ~= "gltf" and extension:lower() ~= "glb") then return true end
-    local file, reason = io.open(path, "rb")
-    if not file then return false, reason end
-    local source
-    if extension:lower() == "glb" then
-        local header = file:read(20)
-        local function uint32(offset)
-            local a, b, c, d = header:byte(offset, offset + 3)
-            return a + b * 256 + c * 65536 + d * 16777216
-        end
-        if not header or #header ~= 20 or header:sub(1, 4) ~= "glTF" or header:sub(17, 20) ~= "JSON"
-            or uint32(5) ~= 2 or uint32(13) > uint32(9) - 20 then
-            file:close()
-            return false, "invalid GLB animation header"
-        end
-        source = file:read(uint32(13))
-    else
-        source = file:read("*a")
-    end
-    file:close()
-    local ok, document = pcall(_json.decode, source)
-    if not ok or type(document) ~= "table" then return false, "invalid glTF animation JSON" end
-    local skin = type(document.skins) == "table" and document.skins[1]
-    local root = type(skin) == "table" and type(skin.joints) == "table" and skin.joints[1]
-    if type(root) ~= "number" or type(document.nodes) ~= "table" or not document.nodes[root + 1] then
-        return false, "glTF animation needs a skeleton"
-    end
-    for _, node in ipairs(document.nodes) do
-        if type(node) == "table" and type(node.children) == "table" then
-            for _, child in ipairs(node.children) do
-                if child == root then return true end
-            end
-        end
-    end
-    return false, "bundled Raylib requires the skeleton root beneath an armature/parent node; re-export with that parent"
 end
 
 --- Loads compatible animation data atomically; a failed load preserves existing clips
@@ -545,7 +619,7 @@ function m.prepare_pose(asset, animation)
         matrices = _ffi.new("Matrix[?]", bone_count), meshes = {},
     }
     pose.model.currentPose, pose.model.boneMatrices = pose.transforms, pose.matrices
-    pose.model.meshCount = 0 -- Raylib evaluates bones only; never uploads shared mesh buffers.
+    pose.model.meshCount = 0
     _lib.UpdateModelAnimation(pose.model, asset.animations[animation.clip - 1], animation.frame)
     local normal_matrices = {}
     for bone = 0, bone_count - 1 do
@@ -609,8 +683,6 @@ function m.prepare_pose(asset, animation)
     asset.poses[animation] = pose
     return pose
 end
-
---- @section Bounds & Materials
 
 --- Copies the cached asset-space bounds
 --- @param asset table Backend-owned asset
@@ -700,17 +772,6 @@ function m.set_material(asset, index, colour, texture_path, opts)
     return true
 end
 
---- Returns the effective alpha mode, including per-instance tint
-local function alpha_mode(asset, material_index, alpha)
-    local settings = asset.materials[material_index + 1]
-    local mode = settings.alpha_mode
-    if mode == "mask" then return 1 end
-    if mode == "blend" then return 2 end
-    if mode == "auto" and (alpha < 255 or asset.native.materials[material_index].maps[0].color.a < 255
-        or settings.texture_alpha or settings.vertex_alpha) then return 2 end
-    return 0
-end
-
 --- Gets mesh centres and transparency for ordering a set of instances
 --- @param asset table Backend-owned asset
 --- @param alpha number Instance alpha (0-255)
@@ -727,9 +788,14 @@ function m.get_draw_parts(asset, alpha, pose)
     return parts
 end
 
---- @section Picking
-
---- Creates a perspective screen ray using the same camera convention as begin_3d
+--- Creates a perspective screen ray using the same camera convention as begin_3d.
+--- @param camera table The camera instance used to compute the ray.
+--- @param x number The X screen coordinate.
+--- @param y number The Y screen coordinate.
+--- @param width? number Optional viewport width (defaults to screen width).
+--- @param height? number Optional viewport height (defaults to screen height).
+--- @return table|nil ray A table containing { origin = {x, y, z}, direction = {x, y, z} }, or nil on failure.
+--- @return string|nil err Error message if the ray could not be created.
 function m.screen_ray(camera, x, y, width, height)
     if not _lib.IsWindowReady() then return nil, "screen rays need an open window" end
     local native_camera = _ffi.new("Camera3D")
@@ -746,8 +812,13 @@ function m.screen_ray(camera, x, y, width, height)
     }
 end
 
---- Tests posed mesh triangles without changing shared CPU/GPU geometry
---- @return table|nil hit Copied world distance, position, normal and 1-based mesh index
+--- Tests posed mesh triangles without changing shared CPU/GPU geometry.
+--- @param asset table The model asset to raycast against.
+--- @param ray table The ray object containing origin and direction {x, y, z}.
+--- @param world_matrix table The 4x4 world transformation matrix.
+--- @param pose? table Optional skeletal or animation pose data.
+--- @param max_distance number The maximum distance threshold for the raycast hit.
+--- @return table|nil hit Copied world distance, position, normal and 1-based mesh index, or nil on miss.
 function m.raycast(asset, ray, world_matrix, pose, max_distance)
     local native_ray = _ffi.new("Ray")
     for _, axis in ipairs({ "x", "y", "z" }) do
@@ -772,8 +843,6 @@ function m.raycast(asset, ray, world_matrix, pose, max_distance)
     end
     return nearest
 end
-
---- @section Rendering
 
 --- Batches matching opaque meshes. Returns false when the current pass needs individual draws.
 --- @param asset table Backend-owned model asset
@@ -824,6 +893,73 @@ function m.draw_instances(asset, mesh_index, nodes)
     if settings.double_sided or mirrored then _lib.rlEnableBackfaceCulling() end
     material.shader, material.maps[0].color = previous_shader, previous_colour
     if not ok then error(reason, 0) end
+    return true
+end
+
+--- Draws many copies of a model's first mesh in a few instanced draw calls.
+--- Instances may carry their own colour. Each distinct colour costs one draw call, so keep the number of colours small.
+--- @param asset table Loaded model asset (uses `asset.native` when present)
+--- @param instances table Array of `{ x, y, z, scale?, colour? }`, one-based. Scale defaults to 0.8
+--- @param count number How many entries of `instances` to draw
+--- @param camera table|nil Reserved for sorting, currently unused
+--- @param colour table|nil Colour `{ r, g, b, a? }` (0-255) for instances without their own. Default is white
+--- @param uniform boolean|nil True if no instance has its own colour, which skips the per-instance scan
+--- @return boolean ok True if drawn, false if the shader or mesh was unavailable or the draw failed
+function m.draw_bulk_instances(asset, instances, count, camera, colour, uniform)
+    local shader = _lighting.instance_shader()
+    if not shader then
+        modit.log.error("[BULK] no instancing shader available")
+        return false
+    end
+
+    local native_model = asset.native or asset
+    if not native_model or not native_model.meshCount or native_model.meshCount <= 0 then
+        return false
+    end
+    if count <= 0 then return true end
+
+    local mesh = native_model.meshes[0]
+    local material_index = native_model.meshMaterial[0]
+    local material = native_model.materials[material_index]
+    local settings = asset.materials[material_index + 1]
+
+    local fallback = colour or WHITE
+    local groups
+    if not uniform and has_colours(instances, count) then
+        groups = group_by_colour(instances, count, fallback)
+    else
+        local r, g, b, a = colour_bytes(fallback)
+        groups = { { r = r, g = g, b = b, a = a, list = instances, n = count } }
+    end
+
+    local largest = 0
+    for _, group in ipairs(groups) do largest = math.max(largest, group.n) end
+    local buffer = transforms_for(largest)
+
+    local diffuse = material.maps[0]
+    local emission = material.maps[EMISSION_MAP_SLOT]
+    local previous_shader = material.shader
+    local previous_colour = _ffi.new("Color", diffuse.color)
+
+    _lib.rlDrawRenderBatchActive()
+    _lighting.set_model_material(settings.smooth and mesh.normals ~= nil, 0, settings.alpha_cutoff, emission.color, settings.emissive_strength, emission.texture.id ~= 0, true)
+    material.shader = shader
+
+    local ok, reason = pcall(function()
+        for _, group in ipairs(groups) do
+            fill_transforms(buffer, group.list, group.n)
+            diffuse.color = _Color(group.r, group.g, group.b, group.a)
+            _lib.DrawMeshInstanced(mesh, material, buffer, group.n)
+        end
+    end)
+
+    material.shader = previous_shader
+    diffuse.color = previous_colour
+
+    if not ok then
+        modit.log.error("[BULK] DrawMeshInstanced failed: " .. tostring(reason))
+        return false
+    end
     return true
 end
 
@@ -882,7 +1018,6 @@ function m.draw(asset, x, y, z, axis_x, axis_y, axis_z, angle, scale_x, scale_y,
         local material = native_model.materials[material_index]
         local settings = asset.materials[material_index + 1]
         local mode = alpha_mode(asset, material_index, alpha)
-        -- Blended surfaces do not cast solid shadows. Cutouts keep their texture silhouette.
         if not shadow_pass or (settings.cast_shadows and mode ~= 2) then
             local emission = material.maps[EMISSION_MAP_SLOT]
             _lighting.set_model_material(settings.smooth and native_model.meshes[index].normals ~= nil,
@@ -894,7 +1029,6 @@ function m.draw(asset, x, y, z, axis_x, axis_y, axis_z, angle, scale_x, scale_y,
             if mode == 2 and not shadow_pass then _lib.rlDisableDepthMask() end
             if settings.double_sided or mirrored then _lib.rlDisableBackfaceCulling() end
 
-            -- A non-owning single-mesh view lets each material receive its own uniforms.
             local draw_model = asset.draw_model
             draw_model.meshCount = 1
             draw_model.meshes = native_model.meshes + index
@@ -918,27 +1052,6 @@ function m.draw(asset, x, y, z, axis_x, axis_y, axis_z, angle, scale_x, scale_y,
             material.shader = asset.saved_shaders[material_index]
             material.maps[SHADOW_MAP_SLOT].texture = asset.saved_maps[material_index]
             if not ok then return false, tostring(reason) end
-        end
-    end
-    return true
-end
-
---- Points every material at the right shader and shadow map for the current pass
---- @param model cdata Model object
---- @return boolean ready False when the current pass must skip this model
-local function bind_materials(model)
-    local shader = _lighting.mesh_shader()
-    if shader == false then return false end
-    shader = shader or get_default_material().shader
-
-    local shadow_texture = _lighting.shadow_texture()
-    for index = 0, model.materialCount - 1 do
-        local material = model.materials[index]
-        material.shader = shader
-        if shadow_texture then
-            material.maps[SHADOW_MAP_SLOT].texture = shadow_texture
-        else
-            material.maps[SHADOW_MAP_SLOT].texture.id = 0
         end
     end
     return true

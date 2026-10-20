@@ -448,6 +448,24 @@ function m.draw(opts)
     return true
 end
 
+--- Draws a flat array of simple instances in a few instanced draw calls, bypassing scene-graph overhead.
+--- Instances may carry their own `colour`. Each distinct colour costs one draw call.
+--- @access mod
+--- @param key string Model key
+--- @param instances table Array of `{ x, y, z, scale?, colour? }`, one-based
+--- @param count number|nil Number of instances to draw (default: all of them)
+--- @param camera table|nil Camera object (reserved, currently unused)
+--- @param colour table|nil Colour `{ r, g, b, a? }` (0-255) for instances without their own, default white
+--- @return boolean ok True if drawn
+--- @return string|nil reason Failure description
+function m.draw_bulk(key, instances, count, camera, colour, uniform)
+    local asset = assets[key]
+    if not asset or not asset.handle then return fail("model not loaded or invalid handle") end
+    count = count or #instances
+    if count == 0 then return true end
+    return _backend.draw_bulk_instances(asset.handle, instances, count, camera, colour, uniform)
+end
+
 --- Draws opaque meshes first, then blended meshes back-to-front using camera view depth
 --- @access mod
 --- @param instances table Array of draw options or instances

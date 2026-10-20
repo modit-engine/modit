@@ -1,6 +1,6 @@
 --- @module settings
 --- @file src/editor/core/settings.lua
---- @description Persistence manager for editor user preferences, active theme, recent projects, and layout panel dimensions.
+--- @description Persistence manager for editor user preferences, active theme, recent projects, disabled plugins, and layout panel dimensions.
 
 --- @section Imports
 
@@ -15,7 +15,12 @@ local DEFAULT_THEME = "default"
 
 --- @section Initialisation
 
-local m = { theme = DEFAULT_THEME, recent = {}, sizes = {}, minimap = true, show_file_previews = true }
+local m = { 
+    theme = DEFAULT_THEME,
+    recent = {}, sizes = {}, disabled_plugins = {},
+    minimap = true, show_file_previews = true,
+}
+
 --- @section Functions
 
 --- Reads editor settings from disk and populates theme, recent projects, and layout sizes in a sandboxed environment
@@ -23,7 +28,7 @@ function m.load()
     m.theme = DEFAULT_THEME
     m.minimap = true
     m.show_file_previews = true
-    m.recent, m.sizes = {}, {}
+    m.recent, m.sizes, m.disabled_plugins = {}, {}, {}
 
     local text = _fs.read_file(PATH)
     if not text then return end
@@ -45,6 +50,12 @@ function m.load()
     if type(data.recent) == "table" then
         for _, p in ipairs(data.recent) do
             if type(p) == "string" then m.recent[#m.recent + 1] = p end
+        end
+    end
+
+    if type(data.disabled_plugins) == "table" then
+        for _, name in ipairs(data.disabled_plugins) do
+            if type(name) == "string" then m.disabled_plugins[name] = true end
         end
     end
 
@@ -73,7 +84,7 @@ function m.set_theme(name)
     end
 end
 
---- Serializes and saves current theme, recent projects, and layout dimensions to editor_settings.lua
+--- Serializes and saves current theme, recent projects, disabled plugins, and layout dimensions to editor_settings.lua
 function m.save()
     local out = { 
         "return {\n",
@@ -85,6 +96,16 @@ function m.save()
 
     for _, p in ipairs(m.recent) do
         out[#out + 1] = ("        %q,\n"):format(p)
+    end
+
+    out[#out + 1] = "    },\n    disabled_plugins = {\n"
+    local disabled = {}
+    for name, off in pairs(m.disabled_plugins or {}) do
+        if off then disabled[#disabled + 1] = name end
+    end
+    table.sort(disabled)
+    for _, name in ipairs(disabled) do
+        out[#out + 1] = ("        %q,\n"):format(name)
     end
 
     out[#out + 1] = "    },\n    sizes = {\n"

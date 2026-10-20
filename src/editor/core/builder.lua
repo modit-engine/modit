@@ -1,4 +1,5 @@
 local _process = require("src.engine.backend.platform." .. require("ffi").os:lower() .. ".process")
+local _ui = require("src.sdk.ui")
 
 local STATUS_SECONDS = 15
 local STATUS_MAX_LENGTH = 90
@@ -114,6 +115,7 @@ function m.build(target, project)
         message = err or "failed to start the build process"
         finished_at = os.time()
         handle = nil
+        _ui.push_toast("Build failed: " .. message, "error")
         return false, message
     end
 
@@ -137,6 +139,12 @@ function m.update()
     state = ok and "success" or "failed"
     message = text
     finished_at = os.time()
+
+    if ok then
+        _ui.push_toast("Build succeeded: " .. shorten(message), "success")
+    else
+        _ui.push_toast("Build failed: " .. shorten(message), "error")
+    end
 end
 
 function m.is_building()

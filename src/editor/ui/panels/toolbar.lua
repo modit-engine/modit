@@ -19,6 +19,7 @@ local _builder = require("src.editor.core.builder")
 local _new_project = require("src.editor.ui.panels.new_project")
 local _settings = require("src.editor.core.settings")
 local _editor_settings = require("src.editor.ui.panels.editor_settings")
+local _plugins_panel = require("src.editor.ui.panels.plugins")
 local _themes = require("src.editor.ui.style.themes")
 local _picker = require("src.editor.core.folder_picker")
 
@@ -31,8 +32,8 @@ end
 
 local BUTTON_HEIGHT = 20
 
-local FILE_MENU_ITEMS_OPEN = { "New Project", "Load Project", "Close Project", "Exit" }
-local FILE_MENU_ITEMS_CLOSED = { "New Project", "Load Project", "Exit" }
+local FILE_MENU_ITEMS_OPEN = { "New Project", "Load Project", "Plugins", "Close Project", "Exit" }
+local FILE_MENU_ITEMS_CLOSED = { "New Project", "Load Project", "Plugins", "Exit" }
 
 local VIEW_MENU_ITEMS = {
     { label = "Toggle Panels", keep_open = true, items = { "Files", "Props", "Console", "Minimap" } },
@@ -63,11 +64,12 @@ local m = {
 
 --- @section Helpers
 
---- Renders a toolbar action button and returns click state.
+--- Renders a toolbar action button and returns click state, spanning the full toolbar height.
 local function render_action_button(label, toolbar_bounds)
     local button_w = _font.width(16, label) + 16
-    local button_y = toolbar_bounds.y + math.floor((toolbar_bounds.h - BUTTON_HEIGHT) / 2)
-    local is_clicked = _ui.button(label, cursor_x, button_y, button_w, BUTTON_HEIGHT, { size = 16, style = "outlined" })
+    local button_y = toolbar_bounds.y
+    local button_h = toolbar_bounds.h
+    local is_clicked = _ui.button(label, cursor_x, button_y, button_w, button_h, { size = 16 })
     cursor_x = cursor_x + button_w + 4
     return is_clicked
 end
@@ -129,6 +131,8 @@ function m.draw(toolbar_bounds, active_theme)
         elseif err then
             print("Load project cancelled or failed: " .. err)
         end
+    elseif picked_option == "Plugins" then
+        _plugins_panel.open()
     elseif picked_option == "Close Project" then
         _session.close_project()
     elseif picked_option == "Exit" then
@@ -178,6 +182,9 @@ function m.draw(toolbar_bounds, active_theme)
         end
     end
 
+    cursor_x = cursor_x + 8
+    _draw.set_colour(active_theme.border_light.color)
+    _draw.line(cursor_x, toolbar_bounds.y, cursor_x, toolbar_bounds.y + toolbar_bounds.h)
     cursor_x = cursor_x + 12
 
     if _session.project then
