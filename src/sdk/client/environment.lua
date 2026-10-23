@@ -1,6 +1,6 @@
 --- @module environment
 --- @file src/sdk/client/environment.lua
---- @description Scene environment in one flat API: lighting, fog and shadows, sky, post-processing and water.
+--- @description Scene environment: lighting, fog and shadows, sky, post-processing and water.
 --- Lighting is applied automatically by camera:begin_3d.
 
 --- @section Imports
@@ -420,7 +420,8 @@ function m.set_local_lights(lights, blockers)
     return true
 end
 
---- Binds the lit shader for the camera. Called by camera:begin_3d
+--- Binds the lit shader for the camera.
+--- @access game
 --- @param cam table Camera from camera.new
 --- @return boolean bound True if the shader was bound
 function m.begin_lighting(cam)
@@ -461,6 +462,7 @@ function m.begin_lighting(cam)
 end
 
 --- Unbinds the lit shader. Called by camera:end_3d
+--- @access game
 function m.finish_lighting()
     _lighting_backend.finish()
     map_ready = false

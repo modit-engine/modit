@@ -32,6 +32,7 @@ _ffi.cdef[[
     int DeleteFileA(const char *path);
     int MoveFileExA(const char *from, const char *to, uint32_t flags);
     uint32_t GetFileAttributesA(const char *path);
+    uint32_t GetModuleFileNameA(void *module, char *filename, uint32_t size);
     int SetFileAttributesA(const char *path, uint32_t attrs);
 ]]
 
@@ -291,6 +292,16 @@ function m.rename(from, to)
         return false, "Could not rename: " .. from
     end
     return true
+end
+
+--- Returns the folder containing the running executable
+--- @return string|nil dir Forward-slash path without trailing slash
+function m.exe_dir()
+    local buffer = _ffi.new("char[1024]")
+    local length = _ffi.C.GetModuleFileNameA(nil, buffer, 1024)
+    if length == 0 or length >= 1024 then return nil end
+    local full = _ffi.string(buffer, length):gsub("\\", "/")
+    return full:match("^(.*)/[^/]*$")
 end
 
 return m

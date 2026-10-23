@@ -1,3 +1,18 @@
+# v0.14.0
+
+More fixes and tweaks.
+
+- `rcedit-x64.exe` added to `vendor/tools/` so can build with custom icon for .exe on load
+- Games have new build section in config to set icons for both contexts
+- engine_assets section into build so can add engine fonts/icons if needed
+- `luajit.dll` swapped for correct version
+- `build` process updated to handle; the exe icons + setting raylib window icon relative to game
+- `icons.lua` now accepts a raw 4-digit hex code anywhere it accepts an icon name: https://app.unpkg.com/lucide-static@1.61.0/files/font/lucide.css
+- `filesystem` updated now saves/loads correctly for .exe built with internal save files
+- Added missing -- @access tags in `environment` module
+- New `camera:set_up(..)` function added sets the 3D up vector of the camera
+- Added file path resolves for audio/font/images
+
 # v0.13.0
 
 Plugin Support & Fixes

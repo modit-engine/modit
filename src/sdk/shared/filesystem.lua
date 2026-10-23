@@ -2,6 +2,8 @@
 --- @file src/sdk/shared/filesystem.lua
 --- @description Saves and loads Lua data tables inside the project's save folder.
 
+--- @default_access game
+
 --- @section Imports
 
 local _fs = require("src.engine.backend.platform." .. require("ffi").os:lower() .. ".filesystem")
@@ -22,7 +24,10 @@ local LUA_KEYWORDS = {
 
 local m = {}
 
-local base_dir = nil -- "<game_dir>/save/", set by m.init
+local base_dir = nil -- "<save root>/", set by m.init
+local bundle = nil   -- MODIT_BUNDLE when running from a packed exe
+
+local BUNDLE_SAVE_PREFIX = "game/save/"
 
 --- @section Helpers
 
@@ -32,18 +37,38 @@ end
 
 local function ensure_dir(relative_dir)
     local root = base_dir:sub(1, -2)
-    if not _fs.is_dir(root) and not _fs.make_dir(root) then
+    if not _fs.ensure_dir(root) then
         return false, "could not create save folder: " .. root
     end
 
     local current = root
     for part in relative_dir:gmatch("[^/]+") do
         current = current .. "/" .. part
-        if not _fs.is_dir(current) and not _fs.make_dir(current) then
+        if not _fs.is_dir(current) and not _fs.create_dir(current) then
             return false, "could not create folder: " .. current
         end
     end
     return true
+end
+
+-- Returns the embedded copy of a save file, or nil
+local function bundle_read(path)
+    if not bundle then return nil end
+    local key = BUNDLE_SAVE_PREFIX .. path
+    if not bundle.has(key) then return nil end
+    local reader = bundle.read or bundle.get -- <-- match your prelude's API
+    return reader and reader(key) or nil
+end
+
+-- Disk first (player progress), then the embedded default
+local function read_source(path)
+    local file = io.open(base_dir .. path, "rb")
+    if file then
+        local content = file:read("*a")
+        file:close()
+        return content
+    end
+    return bundle_read(path)
 end
 
 local function key_order(a, b)
@@ -107,10 +132,17 @@ end
 
 --- @section Functions
 
---- Sets the save folder for this project. Call once at boot
---- @param game_dir string Game folder (saves go in <game_dir>/save/)
-function m.init(game_dir)
-    base_dir = (game_dir:gsub("[/\\]$", "")) .. "/save/"
+--- Sets the save folder. Call once at boot
+--- @param game_dir string Game folder (dev mode saves go in <game_dir>/save/)
+--- @param bundle_api table|nil MODIT_BUNDLE when running from a packed exe
+function m.init(game_dir, bundle_api)
+    bundle = bundle_api
+    if bundle then
+        local exe_dir = _fs.exe_dir() or "."
+        base_dir = exe_dir .. "/save/"
+    else
+        base_dir = (game_dir:gsub("[/\\]$", "")) .. "/save/"
+    end
 end
 
 --- Serializes a table to Lua source (sorted keys, so output is stable)
@@ -134,7 +166,7 @@ function m.exists(path)
         file:close()
         return true
     end
-    return false
+    return bundle ~= nil and bundle.has(BUNDLE_SAVE_PREFIX .. path)
 end
 
 --- Creates a folder inside the save folder
@@ -163,23 +195,9 @@ function m.save(path, data)
     local ready, dir_err = ensure_dir(path:match("^(.*)/[^/]*$") or "")
     if not ready then return false, dir_err end
 
-    local full_path = base_dir .. path
-    local temp_path = full_path .. ".tmp"
-
-    local file, open_err = io.open(temp_path, "wb")
-    if not file then return false, "failed to open file: " .. tostring(open_err) end
-
-    local wrote, write_err = file:write("return ", text)
-    file:close()
-    if not wrote then
-        os.remove(temp_path)
-        return false, "failed to write file: " .. tostring(write_err)
-    end
-
-    os.remove(full_path)
-    local renamed, rename_err = os.rename(temp_path, full_path)
-    if not renamed then return false, "failed to save file: " .. tostring(rename_err) end
-
+    -- write_file writes a .tmp then MoveFileEx(REPLACE_EXISTING): atomic overwrite
+    local ok, err = _fs.write_file(base_dir .. path, "return " .. text)
+    if not ok then return false, "failed to save file: " .. tostring(err) end
     return true
 end
 
@@ -191,16 +209,12 @@ function m.load(path)
     if not base_dir then return nil, NOT_READY end
     if not safe_path(path) then return nil, "invalid save path: " .. tostring(path) end
 
-    local full_path = base_dir .. path
-    local file = io.open(full_path, "rb")
-    if not file then return nil, "file not found: " .. path end
-
-    local content = file:read("*a")
-    file:close()
+    local content = read_source(path)
+    if not content then return nil, "file not found: " .. path end
 
     if content:byte(1) == 27 then return nil, "bytecode is not allowed" end
 
-    local chunk, parse_err = loadstring(content, "@" .. full_path)
+    local chunk, parse_err = loadstring(content, "@" .. path)
     if not chunk then return nil, "failed to parse save file: " .. tostring(parse_err) end
 
     setfenv(chunk, {})

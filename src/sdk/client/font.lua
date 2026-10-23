@@ -16,6 +16,51 @@ Font.default_path = "src/engine/assets/fonts/JetBrainsMono-Regular.ttf"
 --- Internal cache mapping path -> size -> Font instance
 local cache = {}
 
+--- @section Helpers
+
+local function resolve_font_path(path)
+    local file = io.open(path, "rb")
+    if file then
+        file:close()
+        return path, nil, nil
+    end
+
+    local game_dir = (rawget(_G, "modit") and rawget(_G, "modit").game_dir) or "game"
+    local clean_path = path:gsub("^game/", ""):gsub("^assets/", "")
+    
+    local candidate_paths = {
+        game_dir .. "/" .. path,
+        game_dir .. "/assets/" .. clean_path,
+        "game/" .. path,
+        "game/assets/" .. clean_path
+    }
+
+    for _, candidate in ipairs(candidate_paths) do
+        file = io.open(candidate, "rb")
+        if file then
+            file:close()
+            return candidate, nil, nil
+        end
+    end
+
+    local bundled_path = path:gsub("^src/engine/assets/", "game/assets/engine/")
+    if bundled_path == path then
+        bundled_path = "game/" .. path
+    end
+
+    local bundle = rawget(_G, "MODIT_BUNDLE")
+    if not bundle or type(bundle.get) ~= "function" then
+        return nil, "Font not found: " .. path, nil
+    end
+
+    local ok, data = pcall(bundle.get, bundled_path)
+    if not ok or type(data) ~= "string" or #data == 0 then
+        return nil, "Font missing from bundle: " .. bundled_path, nil
+    end
+
+    return nil, nil, data
+end
+
 --- @section Loading & Caching
 
 --- Loads a font at specified pixel size and returns a Font instance
@@ -25,16 +70,45 @@ local cache = {}
 --- @param codepoints table|nil Optional array of character codepoints to load
 --- @return Font|nil font Loaded Font instance or nil on failure
 --- @return string|nil err Error message if loading failed
-function Font.load(path, size, codepoints)
-    local file = io.open(path, "rb")
-    if not file then
-        return nil, "Font not found: " .. path
-    end
-    file:close()
 
-    local handle = _backend.load(path, size, codepoints)
+function Font.load(path, size, codepoints)
+    local resolved_path, err, bundled_data = resolve_font_path(path)
+
+    if not resolved_path and not bundled_data then
+        return nil, err
+    end
+
+    local temp_path
+
+    if bundled_data then
+        local temp_name = string.format("modit_font_%d_%d.ttf", os.time(), math.random(100000, 999999))
+
+        local temp_file, open_err = io.open(temp_name, "wb")
+        if not temp_file then
+            return nil, "Could not create temporary font file '" .. temp_name .. "': " .. tostring(open_err)
+        end
+
+        local write_ok, write_err = temp_file:write(bundled_data)
+        temp_file:close()
+
+        if not write_ok then
+            os.remove(temp_name)
+            return nil, "Could not write temporary font file: " .. tostring(write_err)
+        end
+
+        temp_path = temp_name
+        resolved_path = temp_path
+        print("[font] extracted bundled font to: " .. temp_path)
+    end
+
+    local handle, load_err = _backend.load(resolved_path, size, codepoints)
+
+    if temp_path then
+        os.remove(temp_path)
+    end
+
     if not handle then
-        return nil, "Could not load font: " .. path
+        return nil, load_err or ("Could not load font: " .. path)
     end
 
     return setmetatable({
@@ -44,6 +118,7 @@ function Font.load(path, size, codepoints)
         path = path,
     }, Font)
 end
+
 
 --- Retrieves cached font instance or loads it on demand
 --- @access mod
@@ -90,7 +165,7 @@ end
 --- Unloads this font instance from VRAM and clears cache references
 function Font:unload()
     if not self.handle then return end
-    _backend.font_free(self.handle)
+    _backend.free(self.handle)
 
     for _, by_size in pairs(cache) do
         for size, cached in pairs(by_size) do

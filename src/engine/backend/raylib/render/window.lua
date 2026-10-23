@@ -6,6 +6,7 @@
 
 local _raylib = require("src.engine.backend.raylib.ffi")
 local _bit = require("bit")
+local _log = require("src.engine.core.log")
 
 local _ffi, _lib, _Color = _raylib.ffi, _raylib.lib, _raylib.Color
 
@@ -74,12 +75,51 @@ function m.init(title, width, height, flags, icon_path, enable_audio, target_fps
     end
 
     if icon_path then
-        local icon_img = _lib.LoadImage(icon_path)
-        if icon_img.data ~= nil then
+        local resolved_path = nil
+
+        local function file_exists(path)
+            local f = io.open(path, "rb")
+            if f then f:close(); return true end
+            return false
+        end
+
+        if file_exists(icon_path) then
+            resolved_path = icon_path
+        else
+            local engine = rawget(_G, "modit")
+            local game_dir = engine and engine.game_dir
+            local project_dir = engine and engine.project_dir
+            local clean_path = icon_path:gsub("\\", "/"):gsub("^%./", "")
+            local candidates = { game_dir and (game_dir .. "/" .. clean_path), project_dir and (project_dir .. "/" .. clean_path) }
+
+            for _, path in ipairs(candidates) do
+                if path and file_exists(path) then resolved_path = path; break end
+            end
+        end
+
+        local icon_img = nil
+
+        if resolved_path then
+            icon_img = _lib.LoadImage(resolved_path)
+        elseif MODIT_BUNDLE then
+            local data = MODIT_BUNDLE.get(icon_path)
+
+            if data then
+                local tmp = os.tmpname() .. ".png"
+                local f = io.open(tmp, "wb")
+
+                if f then
+                    f:write(data)
+                    f:close()
+                    icon_img = _lib.LoadImage(tmp)
+                    os.remove(tmp)
+                end
+            end
+        end
+
+        if icon_img and icon_img.data ~= nil then
             _lib.SetWindowIcon(icon_img)
             _lib.UnloadImage(icon_img)
-        else
-            print("Warning: Failed to load icon: " .. icon_path)
         end
     end
 

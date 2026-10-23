@@ -65,8 +65,8 @@ local conf = {
     },
     fps = { target = 144 },
     modules = {},
-    modding = { enabled = true, blacklisted_modules = {} },
-    server = { enabled = false, tick_rate = 30, port = 7777, server_console = true, network = true },
+    modding = { enabled = false, blacklisted_modules = {} },
+    server = { enabled = false, tick_rate = 30, port = 7777, server_console = false, network = false },
 }
 
 --- @section Logging
@@ -182,7 +182,7 @@ if headless then
     end
 
     local engine = build_dynamic_engine(true)
-    if engine.filesystem then engine.filesystem.init(GAME_DIR) end
+    if engine.filesystem then engine.filesystem.init(GAME_DIR, BUNDLE) end
     if engine.mods and conf.modding and conf.modding.enabled == true then
         engine.mods.init(conf, GAME_DIR)
         engine.mods.scan()
@@ -215,6 +215,7 @@ end
 --- @section Client Execution
 
 local engine = build_dynamic_engine(false)
+if engine.filesystem then engine.filesystem.init(GAME_DIR, BUNDLE) end
 local run = require("src.engine.core.internal.run")
 local ok, err = pcall(run.run, engine, conf)
 

@@ -16,6 +16,49 @@ local cache = {}
 
 --- @section Helpers
 
+local function resolve_image_path(path)
+    local file = io.open(path, "rb")
+    if file then
+        file:close()
+        return path, nil, nil
+    end
+
+    local game_dir = (rawget(_G, "modit") and rawget(_G, "modit").game_dir) or "game"
+    local clean_path = path:gsub("^game/", ""):gsub("^assets/", "")
+    
+    local candidate_paths = {
+        game_dir .. "/" .. path,
+        game_dir .. "/assets/" .. clean_path,
+        "game/" .. path,
+        "game/assets/" .. clean_path
+    }
+
+    for _, candidate in ipairs(candidate_paths) do
+        file = io.open(candidate, "rb")
+        if file then
+            file:close()
+            return candidate, nil, nil
+        end
+    end
+
+    local bundled_path = path:gsub("^src/engine/assets/", "game/assets/engine/")
+    if bundled_path == path then
+        bundled_path = "game/" .. path
+    end
+
+    local bundle = rawget(_G, "MODIT_BUNDLE")
+    if not bundle or type(bundle.get) ~= "function" then
+        return nil, "Image not found: " .. path, nil
+    end
+
+    local ok, data = pcall(bundle.get, bundled_path)
+    if not ok or type(data) ~= "string" or #data == 0 then
+        return nil, "Image missing from bundle: " .. bundled_path, nil
+    end
+
+    return nil, nil, data
+end
+
 local function tint_values(tint)
     if not tint then return 255, 255, 255, 255 end
     return tint.r or 255, tint.g or 255, tint.b or 255, tint.a or 255
@@ -63,7 +106,21 @@ function Image.load(opts)
         return cache[opts.path]
     end
 
-    local texture = _backend.load(opts.path)
+    local resolved_path, err, bundled_data = resolve_image_path(opts.path)
+    local texture
+
+    if bundled_data then
+        -- Handle binary bundle loading if needed through backend or temp file creation
+        -- (Assuming backend supports loading via resolved path or direct data if extended)
+        texture = _backend.load(resolved_path)
+    else
+        if not resolved_path then
+            _log.warn("image failed to find: " .. tostring(opts.path) .. " (" .. tostring(err) .. ")")
+            return nil
+        end
+        texture = _backend.load(resolved_path)
+    end
+
     if not texture then
         _log.warn("image failed to load: " .. tostring(opts.path))
         return nil

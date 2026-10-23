@@ -2,6 +2,8 @@
 --- @file src/engine/backend/raylib/render/draw.lua
 --- @description Raylib 2D primitive rendering, color state, scissor clipping, text drawing, and custom font handling.
 
+--- @default_access mod
+
 --- @section Imports
 
 local _raylib = require("src.engine.backend.raylib.ffi")

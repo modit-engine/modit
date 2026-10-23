@@ -160,4 +160,12 @@ function camera:set_fov(fov)
     self.fov = fov
 end
 
+--- Sets the 3D up vector of the camera
+--- @param x number Up X coordinate
+--- @param y number Up Y coordinate
+--- @param z number Up Z coordinate
+function camera:set_up(x, y, z)
+    self.up.x, self.up.y, self.up.z = x, y, z
+end
+
 return camera

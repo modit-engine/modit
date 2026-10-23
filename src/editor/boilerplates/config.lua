@@ -83,6 +83,26 @@ return {
         enabled = false,
         tick_rate = 30,
         port = 7777
+    },
+
+    -- Build / Packaging Settings
+    build = {
+        icons = {
+            windows = {
+                client_exe = nil,
+                server_exe = nil,
+            }
+        },
+        
+        engine_assets = {
+            fonts = true
+        },
+        
+        external_saves = {
+            enabled = false,
+            directory = "saves",
+            files = {},
+        },
     }
 }
 ]]

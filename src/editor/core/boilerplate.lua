@@ -30,11 +30,11 @@ function game.update(dt)
 end
 
 function game.draw()
-    if client.frame then client.frame() end
+    if client.draw then client.draw() end
 end
 
 function game.quit()
-    if client.close then client.close() end
+    if client.quit then client.quit() end
 end
 
 return game

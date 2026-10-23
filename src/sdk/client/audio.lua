@@ -32,6 +32,34 @@ local m = {}
 
 --- @section Helpers
 
+local function resolve_audio_path(path)
+    local file = io.open(path, "rb")
+    if file then
+        file:close()
+        return path, nil
+    end
+
+    local game_dir = (rawget(_G, "modit") and rawget(_G, "modit").game_dir) or "game"
+    local clean_path = path:gsub("^game/", ""):gsub("^assets/", "")
+    
+    local candidate_paths = {
+        game_dir .. "/" .. path,
+        game_dir .. "/assets/" .. clean_path,
+        "game/" .. path,
+        "game/assets/" .. clean_path
+    }
+
+    for _, candidate in ipairs(candidate_paths) do
+        file = io.open(candidate, "rb")
+        if file then
+            file:close()
+            return candidate, nil
+        end
+    end
+
+    return nil, "Audio not found: " .. path
+end
+
 local function new_key(kind)
     next_id = next_id + 1
     return kind .. ":" .. next_id
@@ -51,8 +79,14 @@ end
 --- @param path string Path to the sound file
 --- @return Sound|nil sound Sound handle, or nil on failure
 function m.load_sound(path)
+    local resolved_path, err = resolve_audio_path(path)
+    if not resolved_path then
+        _log.warn("audio: " .. tostring(err))
+        return nil
+    end
+
     local key = new_key("sound")
-    if not _backend.load_sound(key, path) then
+    if not _backend.load_sound(key, resolved_path) then
         _log.warn("audio: failed to load sound: " .. tostring(path))
         return nil
     end
@@ -67,8 +101,14 @@ end
 --- @param path string Path to the audio file
 --- @return Music|nil music Music handle, or nil on failure
 function m.load_music(path)
+    local resolved_path, err = resolve_audio_path(path)
+    if not resolved_path then
+        _log.warn("audio: " .. tostring(err))
+        return nil
+    end
+
     local key = new_key("music")
-    if not _backend.load_music(key, path) then
+    if not _backend.load_music(key, resolved_path) then
         _log.warn("audio: failed to load music: " .. tostring(path))
         return nil
     end
